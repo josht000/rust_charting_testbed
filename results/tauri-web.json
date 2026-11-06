@@ -1,0 +1,59 @@
+{
+  "config": "tauri",
+  "target": "web",
+  "timestamp": "2026-11-06T03:58:56.783Z",
+  "environment": {
+    "os": "Win32",
+    "cpu": "16 logical cores",
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+    "version": "react19/lwc5.2.1/dockview8 web"
+  },
+  "charts": 8,
+  "bars_per_chart": 23400,
+  "startup_ms_to_first_chart": 456.1,
+  "stream_catchup_ms": 10000.2,
+  "stream_rate_bars_per_sec": 15520,
+  "indicator_compute_ms": {
+    "all_charts_median": 13.9,
+    "per_chart_median": 1.7,
+    "runs": 20
+  },
+  "frame_time": {
+    "stream_catchup": {
+      "avg_ms": 16.809,
+      "p95_ms": 16.7,
+      "p99_ms": 16.8,
+      "fps": 59.5
+    },
+    "pan_zoom_10s": {
+      "avg_ms": 17.856,
+      "p95_ms": 33.3,
+      "p99_ms": 33.4,
+      "fps": 56
+    },
+    "live_update_1s_per_chart_10s": {
+      "avg_ms": 16.694,
+      "p95_ms": 16.7,
+      "p99_ms": 16.8,
+      "fps": 59.9
+    },
+    "live_update_100hz_per_chart_10s": {
+      "avg_ms": 21.052,
+      "p95_ms": 33.4,
+      "p99_ms": 33.4,
+      "fps": 47.5
+    }
+  },
+  "memory_mb": {
+    "idle_after_load": 53.2,
+    "after_30s": 181.6,
+    "method": "performance.memory.usedJSHeapSize"
+  },
+  "artifact_size_mb": {
+    "exe": 0,
+    "wasm": 0,
+    "js_bundle": 4.171,
+    "total_web_dist": 56.977
+  },
+  "notes": "Web, streaming model: 4000-bar preload (/data/chart{i}.init.json) + 19400 bars replayed from chart{i}.rest.json in 50ms batches; preload indicators via talib-wasm + pure JS, incremental updates during stream."
+}

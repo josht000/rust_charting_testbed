@@ -1,0 +1,41 @@
+{
+  "name": "1_tauri",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "serve:web": "node scripts/serve-web.mjs",
+    "bench:web": "node scripts/run-bench.mjs",
+    "test": "vitest run",
+    "gen:golden": "cargo run --release --manifest-path src-tauri/Cargo.toml --bin gen_golden",
+    "gen:data": "cargo run --release --manifest-path ../shared/Cargo.toml --bin gen_data -- ./public/data",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
+    "dockview": "^8.8.3",
+    "dockview-react": "^8.8.3",
+    "fancy-canvas": "^2.1.0",
+    "lightweight-charts": "^5.2.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "talib-wasm": "^3.0.1"
+  },
+  "devDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "^1.2.16",
+    "@tauri-apps/cli": "^2.12.4",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "oxlint": "^1.89.0",
+    "puppeteer-core": "^24.43.1",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^4.1.12"
+  }
+}

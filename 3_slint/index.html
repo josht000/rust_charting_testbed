@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slint Trading Testbed</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #0e1013; overflow: hidden; }
+    /* Slint's winit backend renders into this canvas and observes its size. */
+    #canvas { display: block; width: 100vw; height: 100vh; }
+    #loading { position: absolute; inset: 0; display: flex; align-items: center;
+               justify-content: center; color: #5d6570; font: 14px system-ui; }
+  </style>
+</head>
+<body>
+  <div id="loading">loading wasm…</div>
+  <!-- Slint requires the literal id "canvas". -->
+  <canvas id="canvas"></canvas>
+  <script type="module">
+    import init from "./pkg/slint_testbed.js";
+    init().finally(() => { const el = document.getElementById("loading"); if (el) el.remove(); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #131722;
+  font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+}

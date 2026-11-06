@@ -1,0 +1,439 @@
+2026-11-05T03:53:07.033219Z  INFO Starting trunk 0.22.0
+2026-11-05T03:53:07.040059Z  INFO Found an update of trunk: 0.22.0 -> 0.22.1
+2026-11-05T03:53:11.088706Z  INFO starting build
+2026-11-05T03:53:11.090863Z  INFO node packages []
+    Finished `release` profile [optimized] target(s) in 1.33s
+2026-11-05T03:53:51.602071Z  INFO applying new distribution
+2026-11-05T03:53:51.606738Z  INFO success
+2026-11-05T03:53:51.612740Z  INFO serving static assets at -> /
+2026-11-05T03:53:51.620429Z  INFO server listening at:
+2026-11-05T03:53:51.620697Z  INFO     http://127.0.0.1:5172/
+2026-11-05T03:53:51.620732Z  INFO     http://[::1]:5172/
+2026-11-05T03:53:51.635234Z  INFO     http://kubernetes.docker.internal.:5172/
+2026-11-05T03:53:51.636354Z  INFO     http://localhost.:5172/
+2026-11-05T13:12:13.503214Z  INFO starting build
+2026-11-05T13:12:13.513495Z  INFO node packages []
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+error[E0502]: cannot borrow `self.live` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:9
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |         ^^^^^^^^^^----^----^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |         |    |
+    |         |         |    immutable borrow occurs here
+    |         |         immutable borrow later used by call
+    |         mutable borrow occurs here
+
+error[E0502]: cannot borrow `self.ind` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:40
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |                   ---- ----            ^^^^^^^^^^^^^ mutable borrow occurs here
+    |                   |    |
+    |                   |    immutable borrow occurs here
+    |                   immutable borrow later used by call
+
+For more information about this error, try `rustc --explain E0502`.
+error: could not compile `egui_testbed` (lib) due to 2 previous errors
+2026-11-05T13:12:42.584708Z ERROR error
+error from build pipeline
+
+Caused by:
+    0: HTML build pipeline failed (1 errors), showing first
+    1: error from asset pipeline
+    2: running cargo build
+    3: error during cargo build execution
+    4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "C:\\data\\trading\\rust_testbed\\2_egui\\Cargo.toml", "--release"]' returned a bad status: exit code: 101
+2026-11-05T13:12:42.593357Z  INFO starting build
+2026-11-05T13:12:42.596347Z  INFO node packages []
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+error[E0502]: cannot borrow `self.live` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:9
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |         ^^^^^^^^^^----^----^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |         |    |
+    |         |         |    immutable borrow occurs here
+    |         |         immutable borrow later used by call
+    |         mutable borrow occurs here
+
+error[E0502]: cannot borrow `self.ind` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:40
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |                   ---- ----            ^^^^^^^^^^^^^ mutable borrow occurs here
+    |                   |    |
+    |                   |    immutable borrow occurs here
+    |                   immutable borrow later used by call
+
+For more information about this error, try `rustc --explain E0502`.
+error: could not compile `egui_testbed` (lib) due to 2 previous errors
+2026-11-05T13:12:47.614931Z ERROR error
+error from build pipeline
+
+Caused by:
+    0: HTML build pipeline failed (1 errors), showing first
+    1: error from asset pipeline
+    2: running cargo build
+    3: error during cargo build execution
+    4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "C:\\data\\trading\\rust_testbed\\2_egui\\Cargo.toml", "--release"]' returned a bad status: exit code: 101
+2026-11-05T13:12:58.897970Z  INFO starting build
+2026-11-05T13:12:58.900953Z  INFO node packages []
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+error[E0502]: cannot borrow `self.live` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:9
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |         ^^^^^^^^^^----^----^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |         |    |
+    |         |         |    immutable borrow occurs here
+    |         |         immutable borrow later used by call
+    |         mutable borrow occurs here
+
+error[E0502]: cannot borrow `self.ind` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:40
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |                   ---- ----            ^^^^^^^^^^^^^ mutable borrow occurs here
+    |                   |    |
+    |                   |    immutable borrow occurs here
+    |                   immutable borrow later used by call
+
+For more information about this error, try `rustc --explain E0502`.
+error: could not compile `egui_testbed` (lib) due to 2 previous errors
+2026-11-05T13:13:01.510704Z ERROR error
+error from build pipeline
+
+Caused by:
+    0: HTML build pipeline failed (1 errors), showing first
+    1: error from asset pipeline
+    2: running cargo build
+    3: error during cargo build execution
+    4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "C:\\data\\trading\\rust_testbed\\2_egui\\Cargo.toml", "--release"]' returned a bad status: exit code: 101
+2026-11-05T13:13:19.250239Z  INFO starting build
+2026-11-05T13:13:19.261081Z  INFO node packages []
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+error[E0061]: this method takes 3 arguments but 2 arguments were supplied
+   --> src\app.rs:114:15
+    |
+114 |             b.tick(ctx, &mut self.charts);
+    |               ^^^^----------------------- argument #3 of type `&Streamer` is missing
+    |
+note: method defined here
+   --> src\bench.rs:185:12
+    |
+185 |     pub fn tick(&mut self, ctx: &egui::Context, charts: &mut [Chart], streamer: &chart::Streamer) {
+    |            ^^^^                                                       --------------------------
+help: provide the argument
+    |
+114 |             b.tick(ctx, &mut self.charts, /* &Streamer */);
+    |                                         +++++++++++++++++
+
+error[E0502]: cannot borrow `self.live` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:9
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |         ^^^^^^^^^^----^----^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |         |    |
+    |         |         |    immutable borrow occurs here
+    |         |         immutable borrow later used by call
+    |         mutable borrow occurs here
+
+error[E0502]: cannot borrow `self.ind` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:40
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |                   ---- ----            ^^^^^^^^^^^^^ mutable borrow occurs here
+    |                   |    |
+    |                   |    immutable borrow occurs here
+    |                   immutable borrow later used by call
+
+Some errors have detailed explanations: E0061, E0502.
+For more information about an error, try `rustc --explain E0061`.
+error: could not compile `egui_testbed` (lib) due to 3 previous errors
+2026-11-05T13:13:29.367599Z ERROR error
+error from build pipeline
+
+Caused by:
+    0: HTML build pipeline failed (1 errors), showing first
+    1: error from asset pipeline
+    2: running cargo build
+    3: error during cargo build execution
+    4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "C:\\data\\trading\\rust_testbed\\2_egui\\Cargo.toml", "--release"]' returned a bad status: exit code: 101
+2026-11-05T13:13:29.383454Z  INFO starting build
+2026-11-05T13:13:29.486449Z  INFO node packages []
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+error[E0061]: this method takes 3 arguments but 2 arguments were supplied
+   --> src\app.rs:114:15
+    |
+114 |             b.tick(ctx, &mut self.charts);
+    |               ^^^^----------------------- argument #3 of type `&Streamer` is missing
+    |
+note: method defined here
+   --> src\bench.rs:185:12
+    |
+185 |     pub fn tick(&mut self, ctx: &egui::Context, charts: &mut [Chart], streamer: &chart::Streamer) {
+    |            ^^^^                                                       --------------------------
+help: provide the argument
+    |
+114 |             b.tick(ctx, &mut self.charts, /* &Streamer */);
+    |                                         +++++++++++++++++
+
+error[E0502]: cannot borrow `self.live` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:9
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |         ^^^^^^^^^^----^----^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |         |    |
+    |         |         |    immutable borrow occurs here
+    |         |         immutable borrow later used by call
+    |         mutable borrow occurs here
+
+error[E0502]: cannot borrow `self.ind` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:40
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |                   ---- ----            ^^^^^^^^^^^^^ mutable borrow occurs here
+    |                   |    |
+    |                   |    immutable borrow occurs here
+    |                   immutable borrow later used by call
+
+Some errors have detailed explanations: E0061, E0502.
+For more information about an error, try `rustc --explain E0061`.
+error: could not compile `egui_testbed` (lib) due to 3 previous errors
+2026-11-05T13:13:34.594420Z ERROR error
+error from build pipeline
+
+Caused by:
+    0: HTML build pipeline failed (1 errors), showing first
+    1: error from asset pipeline
+    2: running cargo build
+    3: error during cargo build execution
+    4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "C:\\data\\trading\\rust_testbed\\2_egui\\Cargo.toml", "--release"]' returned a bad status: exit code: 101
+2026-11-05T13:13:34.595975Z  INFO starting build
+2026-11-05T13:13:34.604181Z  INFO node packages []
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+error[E0061]: this method takes 3 arguments but 2 arguments were supplied
+   --> src\app.rs:114:15
+    |
+114 |             b.tick(ctx, &mut self.charts);
+    |               ^^^^----------------------- argument #3 of type `&Streamer` is missing
+    |
+note: method defined here
+   --> src\bench.rs:185:12
+    |
+185 |     pub fn tick(&mut self, ctx: &egui::Context, charts: &mut [Chart], streamer: &chart::Streamer) {
+    |            ^^^^                                                       --------------------------
+help: provide the argument
+    |
+114 |             b.tick(ctx, &mut self.charts, /* &Streamer */);
+    |                                         +++++++++++++++++
+
+error[E0502]: cannot borrow `self.live` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:9
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |         ^^^^^^^^^^----^----^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |         |    |
+    |         |         |    immutable borrow occurs here
+    |         |         immutable borrow later used by call
+    |         mutable borrow occurs here
+
+error[E0502]: cannot borrow `self.ind` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:40
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |                   ---- ----            ^^^^^^^^^^^^^ mutable borrow occurs here
+    |                   |    |
+    |                   |    immutable borrow occurs here
+    |                   immutable borrow later used by call
+
+Some errors have detailed explanations: E0061, E0502.
+For more information about an error, try `rustc --explain E0061`.
+error: could not compile `egui_testbed` (lib) due to 3 previous errors
+2026-11-05T13:13:36.783366Z ERROR error
+error from build pipeline
+
+Caused by:
+    0: HTML build pipeline failed (1 errors), showing first
+    1: error from asset pipeline
+    2: running cargo build
+    3: error during cargo build execution
+    4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "C:\\data\\trading\\rust_testbed\\2_egui\\Cargo.toml", "--release"]' returned a bad status: exit code: 101
+2026-11-05T13:13:57.946361Z  INFO starting build
+2026-11-05T13:13:57.955918Z  INFO node packages []
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+error: invalid suffix `VE_CAFE` for number literal
+  --> src\app.rs:82:22
+   |
+82 |             lcg: Lcg(0x11VE_CAFE),
+   |                      ^^^^^^^^^^^ invalid suffix `VE_CAFE`
+   |
+   = help: the suffix must be one of the numeric types (`u32`, `isize`, `f32`, etc.)
+
+error[E0502]: cannot borrow `self.live` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:9
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |         ^^^^^^^^^^----^----^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |         |    |
+    |         |         |    immutable borrow occurs here
+    |         |         immutable borrow later used by call
+    |         mutable borrow occurs here
+
+error[E0502]: cannot borrow `self.ind` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:40
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |                   ---- ----            ^^^^^^^^^^^^^ mutable borrow occurs here
+    |                   |    |
+    |                   |    immutable borrow occurs here
+    |                   immutable borrow later used by call
+
+For more information about this error, try `rustc --explain E0502`.
+error: could not compile `egui_testbed` (lib) due to 3 previous errors
+2026-11-05T13:14:01.621601Z ERROR error
+error from build pipeline
+
+Caused by:
+    0: HTML build pipeline failed (1 errors), showing first
+    1: error from asset pipeline
+    2: running cargo build
+    3: error during cargo build execution
+    4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "C:\\data\\trading\\rust_testbed\\2_egui\\Cargo.toml", "--release"]' returned a bad status: exit code: 101
+2026-11-05T13:14:03.365477Z  INFO starting build
+2026-11-05T13:14:03.374625Z  INFO node packages []
+    Blocking waiting for file lock on package cache
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+error[E0502]: cannot borrow `self.live` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:9
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |         ^^^^^^^^^^----^----^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |         |    |
+    |         |         |    immutable borrow occurs here
+    |         |         immutable borrow later used by call
+    |         mutable borrow occurs here
+
+error[E0502]: cannot borrow `self.ind` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:40
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |                   ---- ----            ^^^^^^^^^^^^^ mutable borrow occurs here
+    |                   |    |
+    |                   |    immutable borrow occurs here
+    |                   immutable borrow later used by call
+
+For more information about this error, try `rustc --explain E0502`.
+error: could not compile `egui_testbed` (lib) due to 2 previous errors
+2026-11-05T13:14:09.987934Z ERROR error
+error from build pipeline
+
+Caused by:
+    0: HTML build pipeline failed (1 errors), showing first
+    1: error from asset pipeline
+    2: running cargo build
+    3: error during cargo build execution
+    4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "C:\\data\\trading\\rust_testbed\\2_egui\\Cargo.toml", "--release"]' returned a bad status: exit code: 101
+2026-11-05T13:14:25.024755Z  INFO starting build
+2026-11-05T13:14:25.026276Z  INFO node packages []
+    Blocking waiting for file lock on package cache
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+error[E0502]: cannot borrow `self.live` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:9
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |         ^^^^^^^^^^----^----^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |         |    |
+    |         |         |    immutable borrow occurs here
+    |         |         immutable borrow later used by call
+    |         mutable borrow occurs here
+
+error[E0502]: cannot borrow `self.ind` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:40
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |                   ---- ----            ^^^^^^^^^^^^^ mutable borrow occurs here
+    |                   |    |
+    |                   |    immutable borrow occurs here
+    |                   immutable borrow later used by call
+
+For more information about this error, try `rustc --explain E0502`.
+error: could not compile `egui_testbed` (lib) due to 2 previous errors
+2026-11-05T13:14:38.996713Z ERROR error
+error from build pipeline
+
+Caused by:
+    0: HTML build pipeline failed (1 errors), showing first
+    1: error from asset pipeline
+    2: running cargo build
+    3: error during cargo build execution
+    4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "C:\\data\\trading\\rust_testbed\\2_egui\\Cargo.toml", "--release"]' returned a bad status: exit code: 101
+2026-11-05T13:14:39.000778Z  INFO starting build
+2026-11-05T13:14:39.003310Z  INFO node packages []
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+error[E0502]: cannot borrow `self.live` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:9
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |         ^^^^^^^^^^----^----^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |         |    |
+    |         |         |    immutable borrow occurs here
+    |         |         immutable borrow later used by call
+    |         mutable borrow occurs here
+
+error[E0502]: cannot borrow `self.ind` as mutable because it is also borrowed as immutable
+   --> src\chart.rs:271:40
+    |
+271 |         self.live.push(self.arrived(), &mut self.ind, bar);
+    |                   ---- ----            ^^^^^^^^^^^^^ mutable borrow occurs here
+    |                   |    |
+    |                   |    immutable borrow occurs here
+    |                   immutable borrow later used by call
+
+For more information about this error, try `rustc --explain E0502`.
+error: could not compile `egui_testbed` (lib) due to 2 previous errors
+2026-11-05T13:14:45.945580Z ERROR error
+error from build pipeline
+
+Caused by:
+    0: HTML build pipeline failed (1 errors), showing first
+    1: error from asset pipeline
+    2: running cargo build
+    3: error during cargo build execution
+    4: cargo call to executable 'cargo' with args: '["build", "--target=wasm32-unknown-unknown", "--manifest-path", "C:\\data\\trading\\rust_testbed\\2_egui\\Cargo.toml", "--release"]' returned a bad status: exit code: 101
+2026-11-05T13:15:10.771857Z  INFO starting build
+2026-11-05T13:15:10.774064Z  INFO node packages []
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+    Finished `release` profile [optimized] target(s) in 3m 38s
+2026-11-05T13:25:55.113870Z  INFO applying new distribution
+2026-11-05T13:25:55.157518Z  INFO success
+2026-11-05T13:25:55.166930Z  INFO starting build
+2026-11-05T13:25:55.168241Z  INFO node packages []
+    Blocking waiting for file lock on build directory
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+    Finished `release` profile [optimized] target(s) in 8m 25s
+2026-11-05T13:35:28.249262Z  INFO applying new distribution
+2026-11-05T13:35:28.288402Z  INFO success
+2026-11-05T13:41:00.503189Z  INFO starting build
+2026-11-05T13:41:00.504541Z  INFO node packages []
+    Finished `release` profile [optimized] target(s) in 0.84s
+2026-11-05T13:41:46.163978Z  INFO applying new distribution
+2026-11-05T13:41:46.174254Z  INFO success
+2026-11-06T01:55:23.746653Z  INFO starting build
+2026-11-06T01:55:23.751493Z  INFO node packages []
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+    Finished `release` profile [optimized] target(s) in 1m 31s
+2026-11-06T01:58:46.875309Z  INFO applying new distribution
+2026-11-06T01:58:46.880050Z  INFO success
+2026-11-06T01:58:46.880379Z  INFO starting build
+2026-11-06T01:58:46.880941Z  INFO node packages []
+    Finished `release` profile [optimized] target(s) in 0.38s
+2026-11-06T01:59:13.921501Z  INFO applying new distribution
+2026-11-06T01:59:13.925115Z  INFO success
+2026-11-06T02:11:56.075930Z  INFO starting build
+2026-11-06T02:11:56.076539Z  INFO node packages []
+   Compiling egui_testbed v0.1.0 (C:\data\trading\rust_testbed\2_egui)
+    Finished `release` profile [optimized] target(s) in 1m 22s
+2026-11-06T02:13:46.086477Z  INFO applying new distribution
+2026-11-06T02:13:46.089426Z  INFO success

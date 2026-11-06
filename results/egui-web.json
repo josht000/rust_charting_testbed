@@ -1,0 +1,59 @@
+{
+  "config": "egui",
+  "target": "web",
+  "timestamp": "2026-11-06T02:28:54.264Z",
+  "environment": {
+    "os": "wasm32",
+    "cpu": "16 logical cores (browser)",
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.0.0 Safari/537.36 Edg/158.0.0.0",
+    "version": "0.1.0"
+  },
+  "charts": 8,
+  "bars_per_chart": 23400,
+  "startup_ms_to_first_chart": 522.6,
+  "stream_catchup_ms": 9735.900000000001,
+  "stream_rate_bars_per_sec": 15941.001859098798,
+  "indicator_compute_ms": {
+    "all_charts_median": 2.2,
+    "per_chart_median": 0.3,
+    "runs": 20
+  },
+  "frame_time": {
+    "stream_catchup": {
+      "avg_ms": 13.405240174672413,
+      "p95_ms": 13.899999999999999,
+      "p99_ms": 14.6,
+      "fps": 74.5976936608248
+    },
+    "pan_zoom_10s": {
+      "avg_ms": 13.587092391304333,
+      "p95_ms": 13.6,
+      "p99_ms": 13.700000000000001,
+      "fps": 73.59926400735993
+    },
+    "live_update_1s_per_chart_10s": {
+      "avg_ms": 13.405093833780159,
+      "p95_ms": 13.5,
+      "p99_ms": 13.6,
+      "fps": 74.59850802983941
+    },
+    "live_update_100hz_per_chart_10s": {
+      "avg_ms": 13.404551539491303,
+      "p95_ms": 13.5,
+      "p99_ms": 13.6,
+      "fps": 74.60152598569888
+    }
+  },
+  "memory_mb": {
+    "idle_after_load": 1.9368391036987305,
+    "after_30s": 2.663323402404785,
+    "method": "performance.memory.usedJSHeapSize"
+  },
+  "artifact_size_mb": {
+    "exe": 0.0,
+    "wasm": 7.6763200759887695,
+    "js_bundle": 0.14482593536376953,
+    "total_web_dist": 7.822532653808594
+  },
+  "notes": "renderer: custom wgpu paint callback (egui-wgpu CallbackTrait); memory = JS heap only (wasm linear memory not counted by performance.memory)"
+}

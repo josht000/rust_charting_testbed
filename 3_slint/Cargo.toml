@@ -1,0 +1,63 @@
+[package]
+name = "slint_testbed"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+publish = false
+
+[lib]
+name = "slint_testbed"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "slint-desktop"
+path = "src/main.rs"
+
+[[bin]]
+name = "serve"
+path = "src/bin/serve.rs"
+
+# slint is declared with default-features = false so the wasm build can stay
+# lean (winit + femtovg only). The `default` cargo feature re-enables the
+# standard desktop feature set for native builds.
+[dependencies]
+slint = { version = "=1.18.1", default-features = false, features = ["compat-1-18", "std"] }
+datagen = { path = "../shared/datagen" }
+indicators = { path = "../shared/indicators" }
+ta = "=0.5.0"          # pure-Rust technical-analysis library (the "rust talib")
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[build-dependencies]
+slint-build = "=1.18.1"
+
+[features]
+default = ["slint/default"]
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "console", "Window", "Location", "Performance", "Document",
+    "HtmlAnchorElement", "HtmlElement", "Blob", "BlobPropertyBag", "Url", "Request",
+    "RequestInit", "RequestMode", "Response", "Headers",
+] }
+getrandom = { version = "0.2", features = ["js"] }   # rand 0.8 on wasm32-unknown-unknown
+console_error_panic_hook = "0.1"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+rayon = "=1.11.0"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = [
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+    "Win32_Foundation",
+] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1

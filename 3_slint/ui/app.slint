@@ -1,0 +1,208 @@
+// Slint trading testbed: 8 candlestick charts in a fixed 4x2 grid.
+// Each chart panel displays a software-rendered image produced in Rust;
+// interaction (pan/zoom) is forwarded to Rust which re-renders the image.
+
+component ChartPanel inherits Rectangle {
+    in property <image> chart;
+    in property <string> title;
+    in property <string> stats;
+    in property <int> idx;
+
+    callback resized(int, float, float);
+    callback pan-start(int, float);
+    callback pan-move(int, float);
+    callback pan-end(int);
+    callback zoomed(int, float, float); // idx, wheel-delta-y px, mouse-x px
+
+    background: #14161b;
+    border-color: #262b33;
+    border-width: 1px;
+    clip: true;
+    // The Image's source pixel size would otherwise become this panel's
+    // preferred size, so the top row grabs most of the window and the bottom
+    // row collapses. Zero preferred size + equal stretch divides rows evenly.
+    preferred-width: 0px;
+    preferred-height: 0px;
+    horizontal-stretch: 1;
+    vertical-stretch: 1;
+
+    VerticalLayout {
+        spacing: 0px;
+        Rectangle {
+            height: 18px;
+            background: #1c1f26;
+            HorizontalLayout {
+                padding-left: 6px;
+                padding-right: 6px;
+                alignment: space-between;
+                Text {
+                    text: root.title;
+                    color: #98a0ac;
+                    font-size: 11px;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: root.stats;
+                    color: #5d6570;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+        Rectangle {
+            clip: true;
+            vertical-stretch: 1;
+            horizontal-stretch: 1;
+            Image {
+                source: root.chart;
+                image-fit: fill;
+                width: 100%;
+                height: 100%;
+                preferred-width: 0px;
+                preferred-height: 0px;
+            }
+            ta := TouchArea {
+                mouse-cursor: ew-resize;
+
+                changed width => {
+                    root.resized(root.idx, self.width / 1px, self.height / 1px);
+                }
+                changed height => {
+                    root.resized(root.idx, self.width / 1px, self.height / 1px);
+                }
+                pointer-event(e) => {
+                    if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                        root.pan-start(root.idx, self.mouse-x / 1px);
+                    }
+                    if (e.kind == PointerEventKind.up) {
+                        root.pan-end(root.idx);
+                    }
+                }
+                moved => {
+                    if (self.pressed) {
+                        root.pan-move(root.idx, self.mouse-x / 1px);
+                    }
+                }
+                scroll-event(e) => {
+                    root.zoomed(root.idx, e.delta-y / 1px, self.mouse-x / 1px);
+                    return accept;
+                }
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "Slint Trading Testbed";
+    background: #0e1013;
+    preferred-width: 1680px;
+    preferred-height: 950px;
+    min-width: 900px;
+    min-height: 560px;
+
+    in property <image> chart0;
+    in property <image> chart1;
+    in property <image> chart2;
+    in property <image> chart3;
+    in property <image> chart4;
+    in property <image> chart5;
+    in property <image> chart6;
+    in property <image> chart7;
+
+    in property <[string]> titles;
+    in property <[string]> stats;
+    in property <string> status;
+
+    callback resized(int, float, float);
+    callback pan-start(int, float);
+    callback pan-move(int, float);
+    callback pan-end(int);
+    callback zoomed(int, float, float);
+
+    VerticalLayout {
+        padding: 3px;
+        spacing: 3px;
+        GridLayout {
+            spacing: 3px;
+            Row {
+                ChartPanel {
+                    idx: 0; chart: root.chart0; title: root.titles[0]; stats: root.stats[0];
+                    resized(i, w, h) => { root.resized(i, w, h); }
+                    pan-start(i, x) => { root.pan-start(i, x); }
+                    pan-move(i, x) => { root.pan-move(i, x); }
+                    pan-end(i) => { root.pan-end(i); }
+                    zoomed(i, d, x) => { root.zoomed(i, d, x); }
+                }
+                ChartPanel {
+                    idx: 1; chart: root.chart1; title: root.titles[1]; stats: root.stats[1];
+                    resized(i, w, h) => { root.resized(i, w, h); }
+                    pan-start(i, x) => { root.pan-start(i, x); }
+                    pan-move(i, x) => { root.pan-move(i, x); }
+                    pan-end(i) => { root.pan-end(i); }
+                    zoomed(i, d, x) => { root.zoomed(i, d, x); }
+                }
+                ChartPanel {
+                    idx: 2; chart: root.chart2; title: root.titles[2]; stats: root.stats[2];
+                    resized(i, w, h) => { root.resized(i, w, h); }
+                    pan-start(i, x) => { root.pan-start(i, x); }
+                    pan-move(i, x) => { root.pan-move(i, x); }
+                    pan-end(i) => { root.pan-end(i); }
+                    zoomed(i, d, x) => { root.zoomed(i, d, x); }
+                }
+                ChartPanel {
+                    idx: 3; chart: root.chart3; title: root.titles[3]; stats: root.stats[3];
+                    resized(i, w, h) => { root.resized(i, w, h); }
+                    pan-start(i, x) => { root.pan-start(i, x); }
+                    pan-move(i, x) => { root.pan-move(i, x); }
+                    pan-end(i) => { root.pan-end(i); }
+                    zoomed(i, d, x) => { root.zoomed(i, d, x); }
+                }
+            }
+            Row {
+                ChartPanel {
+                    idx: 4; chart: root.chart4; title: root.titles[4]; stats: root.stats[4];
+                    resized(i, w, h) => { root.resized(i, w, h); }
+                    pan-start(i, x) => { root.pan-start(i, x); }
+                    pan-move(i, x) => { root.pan-move(i, x); }
+                    pan-end(i) => { root.pan-end(i); }
+                    zoomed(i, d, x) => { root.zoomed(i, d, x); }
+                }
+                ChartPanel {
+                    idx: 5; chart: root.chart5; title: root.titles[5]; stats: root.stats[5];
+                    resized(i, w, h) => { root.resized(i, w, h); }
+                    pan-start(i, x) => { root.pan-start(i, x); }
+                    pan-move(i, x) => { root.pan-move(i, x); }
+                    pan-end(i) => { root.pan-end(i); }
+                    zoomed(i, d, x) => { root.zoomed(i, d, x); }
+                }
+                ChartPanel {
+                    idx: 6; chart: root.chart6; title: root.titles[6]; stats: root.stats[6];
+                    resized(i, w, h) => { root.resized(i, w, h); }
+                    pan-start(i, x) => { root.pan-start(i, x); }
+                    pan-move(i, x) => { root.pan-move(i, x); }
+                    pan-end(i) => { root.pan-end(i); }
+                    zoomed(i, d, x) => { root.zoomed(i, d, x); }
+                }
+                ChartPanel {
+                    idx: 7; chart: root.chart7; title: root.titles[7]; stats: root.stats[7];
+                    resized(i, w, h) => { root.resized(i, w, h); }
+                    pan-start(i, x) => { root.pan-start(i, x); }
+                    pan-move(i, x) => { root.pan-move(i, x); }
+                    pan-end(i) => { root.pan-end(i); }
+                    zoomed(i, d, x) => { root.zoomed(i, d, x); }
+                }
+            }
+        }
+        Rectangle {
+            height: 16px;
+            background: #17191f;
+            Text {
+                x: 6px;
+                text: root.status;
+                color: #4d545f;
+                font-size: 10px;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

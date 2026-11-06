@@ -1,0 +1,59 @@
+{
+  "artifact_size_mb": {
+    "exe": 0.0,
+    "js_bundle": 0.0948,
+    "total_web_dist": 3.7267,
+    "wasm": 3.631
+  },
+  "bars_per_chart": 23400,
+  "charts": 8,
+  "config": "slint",
+  "environment": {
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.0.0 Safari/537.36 Edg/158.0.0.0",
+    "cpu": "wasm32",
+    "os": "wasm32/browser",
+    "version": "slint 1.18.1, rustc 1.99.1 (58cf8f9c3 2026-10-13)"
+  },
+  "frame_time": {
+    "live_update_100hz_per_chart_10s": {
+      "avg_ms": 17.257432431385325,
+      "fps": 29.6,
+      "p95_ms": 20.700000047683716,
+      "p99_ms": 27.5
+    },
+    "live_update_1s_per_chart_10s": {
+      "avg_ms": 30.48888889948527,
+      "fps": 0.9,
+      "p95_ms": 41.89999997615814,
+      "p99_ms": 41.89999997615814
+    },
+    "pan_zoom_10s": {
+      "avg_ms": 7.450544663114486,
+      "fps": 45.9,
+      "p95_ms": 14.800000011920929,
+      "p99_ms": 15.699999988079071
+    },
+    "stream_catchup": {
+      "avg_ms": 24.33264248482304,
+      "fps": 17.723169600651193,
+      "p95_ms": 35.0,
+      "p99_ms": 38.39999997615814
+    }
+  },
+  "indicator_compute_ms": {
+    "all_charts_median": 2.9500000178813934,
+    "per_chart_median": 0.3999999761581421,
+    "runs": 20
+  },
+  "memory_mb": {
+    "after_30s": 2.2456798553466797,
+    "idle_after_load": 2.232842445373535,
+    "method": "performance.memory.usedJSHeapSize (Chromium)"
+  },
+  "notes": "frame = UI action -> rendered frame latency; fps = rendered frames/s during the phase. Data generation excluded. Streaming replay: 4000 bars preload + 2000 bars/s in 50ms batches through the incremental indicator path. EMA/SMA via pure-Rust `ta` crate (TA-Lib-compatible SMA seed); VWAP+volume profile via shared/indicators. Charts software-rendered in Rust into SharedPixelBuffer.",
+  "startup_ms_to_first_chart": 26.19999998807907,
+  "stream_catchup_ms": 10889.699999988079,
+  "stream_rate_bars_per_sec": 2000.0,
+  "target": "web",
+  "timestamp": "2026-11-06T02:31:01.427Z"
+}

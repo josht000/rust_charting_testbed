@@ -1,0 +1,59 @@
+{
+  "config": "egui",
+  "target": "desktop",
+  "timestamp": "2026-11-06T02:23:18.621825400+00:00",
+  "environment": {
+    "os": "windows",
+    "cpu": "Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz",
+    "browser": "",
+    "version": "0.1.0"
+  },
+  "charts": 8,
+  "bars_per_chart": 23400,
+  "startup_ms_to_first_chart": 1509.3766,
+  "stream_catchup_ms": 9726.2752,
+  "stream_rate_bars_per_sec": 15956.776546894334,
+  "indicator_compute_ms": {
+    "all_charts_median": 1.6015000000000001,
+    "per_chart_median": 0.1957,
+    "runs": 20
+  },
+  "frame_time": {
+    "stream_catchup": {
+      "avg_ms": 13.48245391180654,
+      "p95_ms": 13.8342,
+      "p99_ms": 14.247900000000001,
+      "fps": 74.17047419864
+    },
+    "pan_zoom_10s": {
+      "avg_ms": 13.404946514745301,
+      "p95_ms": 13.7814,
+      "p99_ms": 14.1127,
+      "fps": 74.59932786005598
+    },
+    "live_update_1s_per_chart_10s": {
+      "avg_ms": 13.405052949061654,
+      "p95_ms": 13.749300000000002,
+      "p99_ms": 13.9104,
+      "fps": 74.5987355514324
+    },
+    "live_update_100hz_per_chart_10s": {
+      "avg_ms": 13.404721285140557,
+      "p95_ms": 13.7222,
+      "p99_ms": 15.1462,
+      "fps": 74.6005812973167
+    }
+  },
+  "memory_mb": {
+    "idle_after_load": 161.31640625,
+    "after_30s": 190.82421875,
+    "method": "sysinfo RSS"
+  },
+  "artifact_size_mb": {
+    "exe": 14.96826171875,
+    "wasm": 7.6763200759887695,
+    "js_bundle": 0.14482593536376953,
+    "total_web_dist": 7.822532653808594
+  },
+  "notes": "renderer: custom wgpu paint callback (egui-wgpu CallbackTrait)"
+}

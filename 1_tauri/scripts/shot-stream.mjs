@@ -1,0 +1,20 @@
+import puppeteer from 'puppeteer-core';
+import { existsSync } from 'node:fs';
+const C = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Google/Chrome/Application/chrome.exe','C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'];
+const browser = await puppeteer.launch({ executablePath: C.find(existsSync), headless: true, args: ['--no-sandbox','--window-size=1920,1080'] });
+const page = await browser.newPage();
+await page.setViewport({ width: 1680, height: 950 });
+page.on('pageerror', (e) => console.error('[pageerror]', String(e).slice(0,300)));
+await page.goto('http://localhost:5171/?rate=2000', { waitUntil: 'domcontentloaded', timeout: 60000 });
+await page.waitForFunction('window.__charts && window.__charts.filter(Boolean).length === 8', { timeout: 120000, polling: 500 });
+await new Promise((r) => setTimeout(r, 3000));
+await page.screenshot({ path: 'C:/data/trading/rust_testbed/1_tauri/mid-stream.png' });
+await page.waitForFunction('Promise.all(window.__charts.map(h=>h.streamDone)).then(()=>true)', { timeout: 120000, polling: 1000 });
+await new Promise((r) => setTimeout(r, 1500));
+await page.screenshot({ path: 'C:/data/trading/rust_testbed/1_tauri/post-stream.png' });
+// zoomed-in view like before
+await page.evaluate(() => { for (const h of window.__charts) h.chart.timeScale().setVisibleRange({ from: h.bars[23280].ts, to: h.bars[23340].ts }); });
+await new Promise((r) => setTimeout(r, 1500));
+await page.screenshot({ path: 'C:/data/trading/rust_testbed/1_tauri/zoomed-all.png' });
+await browser.close();
+console.log('ok');
