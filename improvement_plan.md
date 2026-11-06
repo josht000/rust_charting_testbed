@@ -45,6 +45,14 @@ The bottleneck isn't rasterization — it's LWC's per-bar series.update() API (i
 
 ## Slint Iteration log
 
-| Step | Change | Files | Web catch-up | Web stream fps | Notes |
-|---|---|---|---|---|---|
-| baseline | — | — |  |  |  |
+Desktop numbers = `slint-desktop.exe --bench` (action→AfterRendering ms / fps). Render modes are switchable: pixels (default) / `SLINT_TB_RENDER=paths` / `=wgpu` (web: `&render=paths`).
+
+| Step | Change | Files | Desktop stream (ms/fps) | pan/zoom | live100 | Notes |
+|---|---|---|---|---|---|---|
+| baseline | — | — | 19.95 / 19.3 | 8.13 / 61.2 | 10.67 / 65.4 | catch-up 10.0s |
+| 1 | rayon `par_iter` across 8 chart buffers (`SharedPixelBuffer` is Send; `Image` wrapped on UI thread) | app.rs, chart.rs, Cargo.toml | **17.21 / 19.5** | 8.11 / 61.2 | **8.48 / 70.8** | raster ~3ms; texture upload+composite now dominates |
+| 2 | Incremental raster: retained frame per chart, integer-px pan blit + dirty strips (left edge sliver, profile region + stale pixels); grid-anchored polylines + dense-bucket alignment for pixel-exactness; `fill_rect_alpha` row fast path | raster.rs, chart.rs, app.rs | 16.83 / 19.6 | **7.57 / 61.0** | 8.00 / 70.9 | byte-exact vs full render (test); streaming/live still full repaint — x-mapping changes every tick by design |
+| 3 | Emit Path geometry (`commands` SVG strings → femtovg tessellation) instead of `SharedPixelBuffer` | app.slint (ChartLayer + Path repeater), chart.rs `layers()` | 28.13 / 19.6 | 20.76 / 36.6 | 20.30 / 48.3 | **regression kept, mode off by default** — lyon parse+tessellate of ~10k+ segs/chart/frame costs more than raster+upload. Web worse too (36.0ms stream vs 24.3 px) |
+| 4 | wgpu texture import: `unstable-wgpu-30` + `renderer-femtovg-wgpu`, `require_wgpu_30`, device/queue from `GraphicsAPI::WGPU30`, instanced-quad pipeline → `Image::try_from(texture)` | gpu.rs, Cargo.toml, app.rs | 19.58 / 18.0 | 12.13 / 55.6 | 14.13 / 62.6 | **regression** — works and renders correctly, but vertex emit + submit + femtovg-wgpu composite loses to the pixel path. Native only, opt-in |
+
+**Result:** steps 1+2 (parallel + incremental software raster) are the keepers — Slint's `SharedPixelBuffer`→texture path is hard to beat; items 3+4 implemented, measured, and documented as slower alternatives left behind `SLINT_TB_RENDER` switches. Blit correctness is test-guarded (`blit_render_matches_full_render` byte-compares blit vs full render).

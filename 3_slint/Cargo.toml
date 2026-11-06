@@ -49,6 +49,9 @@ console_error_panic_hook = "0.1"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 rayon = "=1.11.0"
+# wgpu-based chart renderer (item 4): Slint renders via wgpu 30.x and chart
+# textures are imported as slint::Image (Image::try_from<wgpu::Texture>).
+slint = { version = "=1.18.1", features = ["unstable-wgpu-30", "renderer-femtovg-wgpu"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.60", features = [

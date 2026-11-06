@@ -10,6 +10,8 @@ slint::include_modules!();
 pub mod app;
 pub mod bench;
 pub mod chart;
+#[cfg(not(target_family = "wasm"))]
+pub mod gpu;
 pub mod plat;
 pub mod raster;
 

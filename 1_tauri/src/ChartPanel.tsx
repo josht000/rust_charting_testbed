@@ -229,11 +229,18 @@ export function ChartPanel({ params }: IDockviewPanelProps<{ chart: number }>) {
       let lastFlush = performance.now() - FLUSH_MS + chartIdx * 25;
       const flush = () => {
         if (pendingBars === 0) return;
+        // Follow the stream only while the user is already at the trailing
+        // edge — otherwise every flush would yank the view back and make
+        // scrolling impossible during catch-up. Scrolling to the right edge
+        // resumes the follow.
+        const r = chart.timeScale().getVisibleLogicalRange();
+        const atTail =
+          r !== null && r.to > bars.length - pendingBars - 40;
         pendingBars = 0;
         lastFlush = performance.now();
         profile.setBins(inc.updateProfile());
         candlePrim.requestUpdate();
-        if (bars.length > TAIL) {
+        if (bars.length > TAIL && atTail) {
           // Logical range: index == bar index (no sparse series updates), so
           // this is exact and immune to unmapped-time clamping. The range
           // change triggers the subscribed recalcPrice — no explicit call.

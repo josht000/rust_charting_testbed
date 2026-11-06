@@ -27,27 +27,46 @@ pub struct Canvas<'a> {
     pub buf: &'a mut [Rgba8Pixel],
     pub w: usize,
     pub h: usize,
+    /// Horizontal clip [cx0, cx1): writes outside this column range are dropped.
+    /// Used for incremental strip repaints after a pixel-exact pan blit.
+    pub cx0: i32,
+    pub cx1: i32,
 }
 
 impl<'a> Canvas<'a> {
     pub fn new(buf: &'a mut [Rgba8Pixel], w: usize, h: usize) -> Self {
-        Self { buf, w, h }
+        Self { buf, w, h, cx0: 0, cx1: w as i32 }
+    }
+
+    /// Restrict drawing to columns [cx0, cx1) of the buffer.
+    pub fn with_clip(mut self, cx0: i32, cx1: i32) -> Self {
+        self.cx0 = cx0.max(0);
+        self.cx1 = cx1.min(self.w as i32);
+        self
     }
 
     pub fn fill(&mut self, c: Rgb) {
-        self.buf.fill(c.px());
+        if self.cx0 <= 0 && self.cx1 >= self.w as i32 {
+            self.buf.fill(c.px());
+            return;
+        }
+        let px = c.px();
+        for y in 0..self.h {
+            let row = y * self.w;
+            self.buf[row + self.cx0 as usize..row + self.cx1 as usize].fill(px);
+        }
     }
 
     #[inline]
     pub fn put(&mut self, x: i32, y: i32, c: Rgb) {
-        if x >= 0 && y >= 0 && (x as usize) < self.w && (y as usize) < self.h {
+        if x >= self.cx0 && x < self.cx1 && y >= 0 && (y as usize) < self.h {
             self.buf[y as usize * self.w + x as usize] = c.px();
         }
     }
 
     #[inline]
     pub fn blend(&mut self, x: i32, y: i32, c: Rgb, a: u8) {
-        if x >= 0 && y >= 0 && (x as usize) < self.w && (y as usize) < self.h {
+        if x >= self.cx0 && x < self.cx1 && y >= 0 && (y as usize) < self.h {
             let p = &mut self.buf[y as usize * self.w + x as usize];
             let a = a as u16;
             let ia = 255 - a;
@@ -62,7 +81,7 @@ impl<'a> Canvas<'a> {
         if y < 0 || y as usize >= self.h {
             return;
         }
-        let (a, b) = (x0.min(x1).max(0), x0.max(x1).min(self.w as i32 - 1));
+        let (a, b) = (x0.min(x1).max(self.cx0), x0.max(x1).min(self.cx1 - 1));
         if a > b {
             return;
         }
@@ -75,7 +94,7 @@ impl<'a> Canvas<'a> {
 
     /// Vertical line, y range is clamped.
     pub fn vline(&mut self, x: i32, y0: i32, y1: i32, c: Rgb) {
-        if x < 0 || x as usize >= self.w {
+        if x < self.cx0 || x >= self.cx1 {
             return;
         }
         let (a, b) = (y0.min(y1).max(0), y0.max(y1).min(self.h as i32 - 1));
@@ -90,7 +109,7 @@ impl<'a> Canvas<'a> {
 
     /// Filled rect, [x0,x1) x [y0,y1), clipped.
     pub fn fill_rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, c: Rgb) {
-        let (xa, xb) = (x0.min(x1).max(0), x0.max(x1).min(self.w as i32));
+        let (xa, xb) = (x0.min(x1).max(self.cx0), x0.max(x1).min(self.cx1));
         let (ya, yb) = (y0.min(y1).max(0), y0.max(y1).min(self.h as i32));
         if xa >= xb || ya >= yb {
             return;
@@ -104,11 +123,19 @@ impl<'a> Canvas<'a> {
 
     /// Filled rect with per-pixel alpha blending (0..=255).
     pub fn fill_rect_alpha(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, c: Rgb, a: u8) {
-        let (xa, xb) = (x0.min(x1).max(0), x0.max(x1).min(self.w as i32));
+        let (xa, xb) = (x0.min(x1).max(self.cx0), x0.max(x1).min(self.cx1));
         let (ya, yb) = (y0.min(y1).max(0), y0.max(y1).min(self.h as i32));
+        if xa >= xb {
+            return;
+        }
+        let (a16, ia16) = (a as u16, 255 - a as u16);
+        let (cr, cg, cb) = (c.0 as u16 * a16, c.1 as u16 * a16, c.2 as u16 * a16);
         for y in ya..yb {
-            for x in xa..xb {
-                self.blend(x, y, c, a);
+            let row = y as usize * self.w;
+            for p in &mut self.buf[row + xa as usize..row + xb as usize] {
+                p.r = ((cr + p.r as u16 * ia16) / 255) as u8;
+                p.g = ((cg + p.g as u16 * ia16) / 255) as u8;
+                p.b = ((cb + p.b as u16 * ia16) / 255) as u8;
             }
         }
     }

@@ -78,3 +78,57 @@ fn live_incremental_matches_after_warmup() {
     assert_close(&chart.ind.sma200[n0 - 100..], &refr.sma200[n0 - 100..], "sma200 tail");
     assert_close(&chart.ind.vwap[n0 - 100..], &refr.vwap[n0 - 100..], "vwap tail");
 }
+
+/// The incremental (blit + strip repaint) path must produce pixel-identical
+/// output to a full redraw whenever it is eligible. Scans fixed 1000-bar
+/// windows shifted by exactly 5 bars (= 4 px at 800 px wide) so the
+/// translation is integer-exact; when the visible price range survives the
+/// shift, the blit path fires and is byte-compared against the full render.
+#[test]
+fn blit_render_matches_full_render() {
+    let mut chart = slint_testbed::chart::Chart::new(0);
+    chart.resize(800, 400);
+    while !chart.streaming_done() {
+        chart.stream_batch(4096);
+    }
+    let mut blits = 0;
+    for s in (0..18_000).step_by(997) {
+        chart.start = s as f64;
+        chart.end = chart.start + 1000.0;
+        let f0 = chart.render_frame(None).expect("frame");
+        chart.start += 5.0;
+        chart.end += 5.0;
+        let inc = chart.render_frame(Some(&f0)).expect("frame");
+        let full = chart.render_frame(None).expect("frame");
+        if inc.pb.as_bytes() != full.pb.as_bytes() {
+            let a = inc.pb.as_bytes();
+            let b = full.pb.as_bytes();
+            let pos = a.iter().zip(b.iter()).position(|(x, y)| x != y).unwrap();
+            let (x, y) = (pos / 4 % 800, pos / 4 / 800);
+            panic!(
+                "pixel mismatch at start {s} (blit={}): col {x} row {y} byte {}: {:?} vs {:?}",
+                inc.blit,
+                pos % 4,
+                &a[pos / 4 * 4..pos / 4 * 4 + 4],
+                &b[pos / 4 * 4..pos / 4 * 4 + 4]
+            );
+        }
+        if inc.blit {
+            blits += 1;
+        }
+    }
+    assert!(blits > 0, "blit path never exercised");
+}
+
+/// A no-op pan (view clamped at the data edge) must report "unchanged" so
+/// the caller can skip the image update entirely.
+#[test]
+fn unchanged_frame_returns_none() {
+    let mut chart = slint_testbed::chart::Chart::new(0);
+    chart.resize(800, 400);
+    while !chart.streaming_done() {
+        chart.stream_batch(4096);
+    }
+    let f0 = chart.render_frame(None).expect("frame");
+    assert!(chart.render_frame(Some(&f0)).is_none());
+}

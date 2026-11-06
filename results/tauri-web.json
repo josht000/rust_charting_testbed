@@ -1,7 +1,7 @@
 {
   "config": "tauri",
   "target": "web",
-  "timestamp": "2026-11-06T03:58:56.783Z",
+  "timestamp": "2026-11-06T04:17:25.521Z",
   "environment": {
     "os": "Win32",
     "cpu": "16 logical cores",
@@ -10,12 +10,12 @@
   },
   "charts": 8,
   "bars_per_chart": 23400,
-  "startup_ms_to_first_chart": 456.1,
-  "stream_catchup_ms": 10000.2,
-  "stream_rate_bars_per_sec": 15520,
+  "startup_ms_to_first_chart": 465.1,
+  "stream_catchup_ms": 10028.6,
+  "stream_rate_bars_per_sec": 15476,
   "indicator_compute_ms": {
-    "all_charts_median": 13.9,
-    "per_chart_median": 1.7,
+    "all_charts_median": 15.55,
+    "per_chart_median": 1.8,
     "runs": 20
   },
   "frame_time": {
@@ -26,27 +26,27 @@
       "fps": 59.5
     },
     "pan_zoom_10s": {
-      "avg_ms": 17.856,
-      "p95_ms": 33.3,
-      "p99_ms": 33.4,
-      "fps": 56
-    },
-    "live_update_1s_per_chart_10s": {
-      "avg_ms": 16.694,
+      "avg_ms": 16.666,
       "p95_ms": 16.7,
       "p99_ms": 16.8,
-      "fps": 59.9
+      "fps": 60
+    },
+    "live_update_1s_per_chart_10s": {
+      "avg_ms": 16.666,
+      "p95_ms": 16.8,
+      "p99_ms": 16.8,
+      "fps": 60
     },
     "live_update_100hz_per_chart_10s": {
-      "avg_ms": 21.052,
-      "p95_ms": 33.4,
-      "p99_ms": 33.4,
-      "fps": 47.5
+      "avg_ms": 16.666,
+      "p95_ms": 16.7,
+      "p99_ms": 16.8,
+      "fps": 60
     }
   },
   "memory_mb": {
-    "idle_after_load": 53.2,
-    "after_30s": 181.6,
+    "idle_after_load": 74,
+    "after_30s": 158.9,
     "method": "performance.memory.usedJSHeapSize"
   },
   "artifact_size_mb": {

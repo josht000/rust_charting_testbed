@@ -2,8 +2,17 @@
 // Each chart panel displays a software-rendered image produced in Rust;
 // interaction (pan/zoom) is forwarded to Rust which re-renders the image.
 
+// One geometry layer of a chart (geometry render mode): a path plus paint.
+export struct ChartLayer {
+    cmd: string,
+    fill: brush,
+    stroke: brush,
+    sw: length,
+}
+
 component ChartPanel inherits Rectangle {
     in property <image> chart;
+    in property <[ChartLayer]> layers;
     in property <string> title;
     in property <string> stats;
     in property <int> idx;
@@ -31,22 +40,26 @@ component ChartPanel inherits Rectangle {
         Rectangle {
             height: 18px;
             background: #1c1f26;
-            HorizontalLayout {
-                padding-left: 6px;
-                padding-right: 6px;
-                alignment: space-between;
-                Text {
-                    text: root.title;
-                    color: #98a0ac;
-                    font-size: 11px;
-                    vertical-alignment: center;
-                }
-                Text {
-                    text: root.stats;
-                    color: #5d6570;
-                    font-size: 10px;
-                    vertical-alignment: center;
-                }
+            clip: true;
+            // Absolute positioning: text metrics never enter the layout solver,
+            // so the per-tick stats width can't churn the grid (borders wiggled).
+            Text {
+                x: 6px;
+                width: self.preferred-width;
+                height: parent.height;
+                text: root.title;
+                color: #98a0ac;
+                font-size: 11px;
+                vertical-alignment: center;
+            }
+            Text {
+                x: parent.width - self.preferred-width - 6px;
+                width: self.preferred-width;
+                height: parent.height;
+                text: root.stats;
+                color: #5d6570;
+                font-size: 10px;
+                vertical-alignment: center;
             }
         }
         Rectangle {
@@ -60,6 +73,20 @@ component ChartPanel inherits Rectangle {
                 height: 100%;
                 preferred-width: 0px;
                 preferred-height: 0px;
+            }
+            for layer in root.layers: Path {
+                x: 0;
+                y: 0;
+                width: 100%;
+                height: 100%;
+                commands: layer.cmd;
+                fill: layer.fill;
+                stroke: layer.stroke;
+                stroke-width: layer.sw;
+                viewbox-width: parent.width / 1px;
+                viewbox-height: parent.height / 1px;
+                fit: fill;
+                anti-alias: true;
             }
             ta := TouchArea {
                 mouse-cursor: ew-resize;
@@ -109,6 +136,15 @@ export component AppWindow inherits Window {
     in property <image> chart6;
     in property <image> chart7;
 
+    in property <[ChartLayer]> layers0;
+    in property <[ChartLayer]> layers1;
+    in property <[ChartLayer]> layers2;
+    in property <[ChartLayer]> layers3;
+    in property <[ChartLayer]> layers4;
+    in property <[ChartLayer]> layers5;
+    in property <[ChartLayer]> layers6;
+    in property <[ChartLayer]> layers7;
+
     in property <[string]> titles;
     in property <[string]> stats;
     in property <string> status;
@@ -126,7 +162,7 @@ export component AppWindow inherits Window {
             spacing: 3px;
             Row {
                 ChartPanel {
-                    idx: 0; chart: root.chart0; title: root.titles[0]; stats: root.stats[0];
+                    idx: 0; chart: root.chart0; layers: root.layers0; title: root.titles[0]; stats: root.stats[0];
                     resized(i, w, h) => { root.resized(i, w, h); }
                     pan-start(i, x) => { root.pan-start(i, x); }
                     pan-move(i, x) => { root.pan-move(i, x); }
@@ -134,7 +170,7 @@ export component AppWindow inherits Window {
                     zoomed(i, d, x) => { root.zoomed(i, d, x); }
                 }
                 ChartPanel {
-                    idx: 1; chart: root.chart1; title: root.titles[1]; stats: root.stats[1];
+                    idx: 1; chart: root.chart1; layers: root.layers1; title: root.titles[1]; stats: root.stats[1];
                     resized(i, w, h) => { root.resized(i, w, h); }
                     pan-start(i, x) => { root.pan-start(i, x); }
                     pan-move(i, x) => { root.pan-move(i, x); }
@@ -142,7 +178,7 @@ export component AppWindow inherits Window {
                     zoomed(i, d, x) => { root.zoomed(i, d, x); }
                 }
                 ChartPanel {
-                    idx: 2; chart: root.chart2; title: root.titles[2]; stats: root.stats[2];
+                    idx: 2; chart: root.chart2; layers: root.layers2; title: root.titles[2]; stats: root.stats[2];
                     resized(i, w, h) => { root.resized(i, w, h); }
                     pan-start(i, x) => { root.pan-start(i, x); }
                     pan-move(i, x) => { root.pan-move(i, x); }
@@ -150,7 +186,7 @@ export component AppWindow inherits Window {
                     zoomed(i, d, x) => { root.zoomed(i, d, x); }
                 }
                 ChartPanel {
-                    idx: 3; chart: root.chart3; title: root.titles[3]; stats: root.stats[3];
+                    idx: 3; chart: root.chart3; layers: root.layers3; title: root.titles[3]; stats: root.stats[3];
                     resized(i, w, h) => { root.resized(i, w, h); }
                     pan-start(i, x) => { root.pan-start(i, x); }
                     pan-move(i, x) => { root.pan-move(i, x); }
@@ -160,7 +196,7 @@ export component AppWindow inherits Window {
             }
             Row {
                 ChartPanel {
-                    idx: 4; chart: root.chart4; title: root.titles[4]; stats: root.stats[4];
+                    idx: 4; chart: root.chart4; layers: root.layers4; title: root.titles[4]; stats: root.stats[4];
                     resized(i, w, h) => { root.resized(i, w, h); }
                     pan-start(i, x) => { root.pan-start(i, x); }
                     pan-move(i, x) => { root.pan-move(i, x); }
@@ -168,7 +204,7 @@ export component AppWindow inherits Window {
                     zoomed(i, d, x) => { root.zoomed(i, d, x); }
                 }
                 ChartPanel {
-                    idx: 5; chart: root.chart5; title: root.titles[5]; stats: root.stats[5];
+                    idx: 5; chart: root.chart5; layers: root.layers5; title: root.titles[5]; stats: root.stats[5];
                     resized(i, w, h) => { root.resized(i, w, h); }
                     pan-start(i, x) => { root.pan-start(i, x); }
                     pan-move(i, x) => { root.pan-move(i, x); }
@@ -176,7 +212,7 @@ export component AppWindow inherits Window {
                     zoomed(i, d, x) => { root.zoomed(i, d, x); }
                 }
                 ChartPanel {
-                    idx: 6; chart: root.chart6; title: root.titles[6]; stats: root.stats[6];
+                    idx: 6; chart: root.chart6; layers: root.layers6; title: root.titles[6]; stats: root.stats[6];
                     resized(i, w, h) => { root.resized(i, w, h); }
                     pan-start(i, x) => { root.pan-start(i, x); }
                     pan-move(i, x) => { root.pan-move(i, x); }
@@ -184,7 +220,7 @@ export component AppWindow inherits Window {
                     zoomed(i, d, x) => { root.zoomed(i, d, x); }
                 }
                 ChartPanel {
-                    idx: 7; chart: root.chart7; title: root.titles[7]; stats: root.stats[7];
+                    idx: 7; chart: root.chart7; layers: root.layers7; title: root.titles[7]; stats: root.stats[7];
                     resized(i, w, h) => { root.resized(i, w, h); }
                     pan-start(i, x) => { root.pan-start(i, x); }
                     pan-move(i, x) => { root.pan-move(i, x); }

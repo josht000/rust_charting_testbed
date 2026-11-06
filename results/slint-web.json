@@ -2,8 +2,8 @@
   "artifact_size_mb": {
     "exe": 0.0,
     "js_bundle": 0.0948,
-    "total_web_dist": 3.7267,
-    "wasm": 3.631
+    "total_web_dist": 3.7607,
+    "wasm": 3.665
   },
   "bars_per_chart": 23400,
   "charts": 8,
@@ -16,44 +16,44 @@
   },
   "frame_time": {
     "live_update_100hz_per_chart_10s": {
-      "avg_ms": 17.257432431385325,
-      "fps": 29.6,
-      "p95_ms": 20.700000047683716,
-      "p99_ms": 27.5
+      "avg_ms": 24.019512195620386,
+      "fps": 28.7,
+      "p95_ms": 25.600000023841858,
+      "p99_ms": 26.80000001192093
     },
     "live_update_1s_per_chart_10s": {
-      "avg_ms": 30.48888889948527,
+      "avg_ms": 42.099999997350906,
       "fps": 0.9,
-      "p95_ms": 41.89999997615814,
-      "p99_ms": 41.89999997615814
+      "p95_ms": 48.0,
+      "p99_ms": 48.0
     },
     "pan_zoom_10s": {
-      "avg_ms": 7.450544663114486,
-      "fps": 45.9,
-      "p95_ms": 14.800000011920929,
-      "p99_ms": 15.699999988079071
+      "avg_ms": 21.119298246346023,
+      "fps": 45.6,
+      "p95_ms": 26.80000001192093,
+      "p99_ms": 27.399999976158142
     },
     "stream_catchup": {
-      "avg_ms": 24.33264248482304,
-      "fps": 17.723169600651193,
-      "p95_ms": 35.0,
-      "p99_ms": 38.39999997615814
+      "avg_ms": 35.97616580174994,
+      "fps": 17.10886735754022,
+      "p95_ms": 50.69999998807907,
+      "p99_ms": 53.5
     }
   },
   "indicator_compute_ms": {
-    "all_charts_median": 2.9500000178813934,
-    "per_chart_median": 0.3999999761581421,
+    "all_charts_median": 2.5499999821186066,
+    "per_chart_median": 0.30000001192092896,
     "runs": 20
   },
   "memory_mb": {
-    "after_30s": 2.2456798553466797,
-    "idle_after_load": 2.232842445373535,
+    "after_30s": 2.5894384384155273,
+    "idle_after_load": 2.219782829284668,
     "method": "performance.memory.usedJSHeapSize (Chromium)"
   },
   "notes": "frame = UI action -> rendered frame latency; fps = rendered frames/s during the phase. Data generation excluded. Streaming replay: 4000 bars preload + 2000 bars/s in 50ms batches through the incremental indicator path. EMA/SMA via pure-Rust `ta` crate (TA-Lib-compatible SMA seed); VWAP+volume profile via shared/indicators. Charts software-rendered in Rust into SharedPixelBuffer.",
-  "startup_ms_to_first_chart": 26.19999998807907,
-  "stream_catchup_ms": 10889.699999988079,
+  "startup_ms_to_first_chart": 27.600000023841858,
+  "stream_catchup_ms": 11280.699999988079,
   "stream_rate_bars_per_sec": 2000.0,
   "target": "web",
-  "timestamp": "2026-11-06T02:31:01.427Z"
+  "timestamp": "2026-11-06T04:26:57.336Z"
 }

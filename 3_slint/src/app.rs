@@ -19,6 +19,14 @@ pub struct App {
     pub pan_idx: Cell<i32>,
     pub pan_x: Cell<f32>,
     pub bench: RefCell<Option<Rc<Bench>>>,
+    /// Last rendered frame per chart, for incremental (blit) re-rendering.
+    pub frame_cache: RefCell<Vec<Option<crate::chart::Frame>>>,
+    mode: RenderMode,
+    /// wgpu render mode: shared device/queue pipeline + per-chart textures.
+    #[cfg(not(target_family = "wasm"))]
+    gpu: RefCell<Option<crate::gpu::Gpu>>,
+    #[cfg(not(target_family = "wasm"))]
+    chart_gpu: RefCell<Vec<Option<crate::gpu::ChartGpu>>>,
 }
 
 fn set_chart_image(ui: &AppWindow, idx: usize, img: slint::Image) {
@@ -35,33 +43,134 @@ fn set_chart_image(ui: &AppWindow, idx: usize, img: slint::Image) {
     }
 }
 
+fn set_chart_layers(ui: &AppWindow, idx: usize, layers: Vec<crate::ChartLayer>) {
+    let m = ModelRc::from(Rc::new(VecModel::from(layers)));
+    match idx {
+        0 => ui.set_layers0(m),
+        1 => ui.set_layers1(m),
+        2 => ui.set_layers2(m),
+        3 => ui.set_layers3(m),
+        4 => ui.set_layers4(m),
+        5 => ui.set_layers5(m),
+        6 => ui.set_layers6(m),
+        7 => ui.set_layers7(m),
+        _ => {}
+    }
+}
+
+/// Chart presentation path: pixel-buffer images (default), emitted Path
+/// geometry (`SLINT_TB_RENDER=paths` / `&render=paths`), or wgpu-rendered
+/// chart textures (`SLINT_TB_RENDER=wgpu`, native only).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum RenderMode {
+    Pixels,
+    Paths,
+    Wgpu,
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn render_mode() -> RenderMode {
+    match std::env::var("SLINT_TB_RENDER").as_deref() {
+        Ok("paths") => RenderMode::Paths,
+        Ok("wgpu") => RenderMode::Wgpu,
+        _ => RenderMode::Pixels,
+    }
+}
+
+#[cfg(target_family = "wasm")]
+fn render_mode() -> RenderMode {
+    let q = web_sys::window().and_then(|w| w.location().search().ok()).unwrap_or_default();
+    if q.contains("render=paths") {
+        RenderMode::Paths
+    } else {
+        RenderMode::Pixels
+    }
+}
+
 impl App {
     /// Software-render chart `idx` and push the image into the UI.
+    /// Re-renders incrementally (pan blit) when possible.
     pub fn render_chart(&self, idx: usize) {
         let Some(ui) = self.ui.upgrade() else { return };
-        let img = self.charts.borrow()[idx].render();
-        set_chart_image(&ui, idx, img);
+        match self.mode {
+            RenderMode::Paths => {
+                let layers = self.charts.borrow()[idx].layers();
+                set_chart_layers(&ui, idx, layers);
+            }
+            #[cfg(not(target_family = "wasm"))]
+            RenderMode::Wgpu => self.render_chart_gpu(&ui, idx),
+            _ => {
+                let prev = self.frame_cache.borrow_mut()[idx].take();
+                let out = self.charts.borrow()[idx].render_frame(prev.as_ref());
+                match out {
+                    Some(f) => {
+                        set_chart_image(&ui, idx, slint::Image::from_rgba8(f.pb.clone()));
+                        self.frame_cache.borrow_mut()[idx] = Some(f);
+                    }
+                    None => self.frame_cache.borrow_mut()[idx] = prev, // unchanged
+                }
+            }
+        }
         if let Some(b) = self.bench.borrow().as_ref() {
             b.on_first_chart();
         }
     }
 
+    /// wgpu mode: draw chart `idx` into its texture; (re)bind the imported
+    /// image only when the texture handle changed (first frame / resize).
+    #[cfg(not(target_family = "wasm"))]
+    fn render_chart_gpu(&self, ui: &AppWindow, idx: usize) {
+        let guard = self.gpu.borrow();
+        let Some(g) = guard.as_ref() else { return }; // device not captured yet
+        let mut slots = self.chart_gpu.borrow_mut();
+        let charts = self.charts.borrow();
+        let prev_img = slots[idx].as_ref().map(|s| s.img.clone());
+        g.render_chart(&mut slots[idx], &charts[idx]);
+        let img = slots[idx].as_ref().unwrap().img.clone();
+        if prev_img != Some(img.clone()) {
+            set_chart_image(ui, idx, img);
+        }
+    }
+
     /// Render every chart into an image. Native builds rasterize the 8 chart
     /// buffers in parallel with rayon; wasm stays sequential (no threads).
+    /// These call sites always change bar data (stream/live), so incremental
+    /// reuse is never eligible — prev = None on purpose.
     fn render_all(&self) {
         let Some(ui) = self.ui.upgrade() else { return };
         let charts = self.charts.borrow();
-        // SharedPixelBuffer is Send (atomic-refcounted); slint::Image is not
-        // (VRc variants), so wrap on the UI thread after the parallel map.
-        #[cfg(not(target_family = "wasm"))]
-        let buffers = {
-            use rayon::prelude::*;
-            charts.par_iter().map(|c| c.render_pixels()).collect::<Vec<_>>()
-        };
-        #[cfg(target_family = "wasm")]
-        let buffers: Vec<_> = charts.iter().map(|c| c.render_pixels()).collect();
-        for (i, pb) in buffers.into_iter().enumerate() {
-            set_chart_image(&ui, i, slint::Image::from_rgba8(pb));
+        match self.mode {
+            #[cfg(not(target_family = "wasm"))]
+            RenderMode::Wgpu => {
+                drop(charts);
+                for i in 0..8 {
+                    self.render_chart_gpu(&ui, i);
+                }
+            }
+            RenderMode::Paths => {
+                for (i, c) in charts.iter().enumerate() {
+                    set_chart_layers(&ui, i, c.layers());
+                }
+            }
+            _ => {
+                // SharedPixelBuffer is Send (atomic-refcounted); slint::Image
+                // is not (VRc variants), so wrap on the UI thread after the map.
+                #[cfg(not(target_family = "wasm"))]
+                let frames = {
+                    use rayon::prelude::*;
+                    charts.par_iter().map(|c| c.render_frame(None)).collect::<Vec<_>>()
+                };
+                #[cfg(target_family = "wasm")]
+                let frames: Vec<_> =
+                    charts.iter().map(|c| c.render_frame(None)).collect();
+                let mut cache = self.frame_cache.borrow_mut();
+                for (i, f) in frames.into_iter().enumerate() {
+                    if let Some(f) = f {
+                        set_chart_image(&ui, i, slint::Image::from_rgba8(f.pb.clone()));
+                        cache[i] = Some(f);
+                    }
+                }
+            }
         }
         if let Some(b) = self.bench.borrow().as_ref() {
             b.on_first_chart();
@@ -156,6 +265,16 @@ pub fn run() {
     // data generation is excluded from startup per the benchmark rules.
     let charts: Vec<Chart> = (0..8).map(Chart::new).collect();
 
+    let mode = render_mode();
+    // wgpu chart mode requires Slint's wgpu 30 renderer (femtovg-on-wgpu).
+    #[cfg(not(target_family = "wasm"))]
+    if mode == RenderMode::Wgpu {
+        slint::BackendSelector::new()
+            .require_wgpu_30(slint::wgpu_30::WGPUConfiguration::default())
+            .select()
+            .expect("wgpu 30 renderer required");
+    }
+
     let t_app = now_ms();
     let ui = match AppWindow::new() {
         Ok(u) => u,
@@ -180,6 +299,12 @@ pub fn run() {
         pan_idx: Cell::new(-1),
         pan_x: Cell::new(0.0f32),
         bench: RefCell::new(None),
+        frame_cache: RefCell::new((0..8).map(|_| None).collect()),
+        mode,
+        #[cfg(not(target_family = "wasm"))]
+        gpu: RefCell::new(None),
+        #[cfg(not(target_family = "wasm"))]
+        chart_gpu: RefCell::new((0..8).map(|_| None).collect()),
     });
 
     {
@@ -188,7 +313,15 @@ pub fn run() {
             if w < 2.0 || h < 2.0 {
                 return;
             }
-            let changed = app.charts.borrow_mut()[idx as usize].resize(w as u32, h as u32);
+            // Render at physical pixels — the panel size is fractional logical
+            // px, and stretching a truncated buffer is a per-frame shimmer.
+            let sf = app.ui.upgrade().map(|u| u.window().scale_factor()).unwrap_or(1.0);
+            let nw = (w * sf).round().max(2.0) as u32;
+            let nh = (h * sf).round().max(2.0) as u32;
+            if std::env::var("SLINT_TB_DEBUG").is_ok() {
+                eprintln!("resized chart={idx} logical={w:.2}x{h:.2} sf={sf} phys={nw}x{nh}");
+            }
+            let changed = app.charts.borrow_mut()[idx as usize].resize(nw, nh);
             if changed {
                 app.render_chart(idx as usize);
             }
@@ -207,7 +340,8 @@ pub fn run() {
             if app.pan_idx.get() != idx {
                 return;
             }
-            let dx = (x - app.pan_x.get()) as f64;
+            let sf = app.ui.upgrade().map(|u| u.window().scale_factor()).unwrap_or(1.0);
+            let dx = (x - app.pan_x.get()) as f64 * sf as f64;
             app.pan_x.set(x);
             app.charts.borrow_mut()[idx as usize].pan_px(dx);
             app.render_chart(idx as usize);
@@ -224,17 +358,29 @@ pub fn run() {
     {
         let app = app.clone();
         ui.on_zoomed(move |idx, dy, x| {
-            app.charts.borrow_mut()[idx as usize].zoom_at(x as f64, dy as f64);
+            let sf = app.ui.upgrade().map(|u| u.window().scale_factor()).unwrap_or(1.0);
+            app.charts.borrow_mut()[idx as usize].zoom_at(x as f64 * sf as f64, dy as f64);
             app.render_chart(idx as usize);
         });
     }
 
     let is_bench = bench_flag();
 
-    if is_bench {
-        // Frame-latency sampling via the rendering notifier.
+    if is_bench || mode == RenderMode::Wgpu {
+        // Frame-latency sampling + wgpu device/queue capture.
         let app2 = app.clone();
-        let _ = ui.window().set_rendering_notifier(move |state, _api| {
+        let _ = ui.window().set_rendering_notifier(move |state, api| {
+            #[cfg(not(target_family = "wasm"))]
+            {
+                if let slint::RenderingState::RenderingSetup = state {
+                    if let slint::GraphicsAPI::WGPU30 { device, queue, .. } = api {
+                        if app2.gpu.borrow().is_none() {
+                            *app2.gpu.borrow_mut() =
+                                Some(crate::gpu::Gpu::new(device.clone(), queue.clone()));
+                        }
+                    }
+                }
+            }
             if let slint::RenderingState::AfterRendering = state {
                 if let Some(b) = app2.bench.borrow().as_ref() {
                     b.on_frame();

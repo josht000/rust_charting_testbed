@@ -65,54 +65,103 @@ class CandleRenderer implements IPrimitivePaneRenderer {
       const i1 = Math.min(bars.length - 1, Math.ceil(range.to));
       if (i1 < i0) return;
 
-      // Bar spacing from consecutive logical coordinates.
+      // Linearized coordinate math: index->x and price->y are affine, so
+      // two API conversions each give us O(1) math per bar — per-call
+      // coordinate APIs at 23k bars x 8 charts made full-view pan/zoom
+      // unusable.
       const xa = this._ts.logicalToCoordinate(i0 as Logical);
       const xb = this._ts.logicalToCoordinate((i0 + 1) as Logical);
-      const spacing = xa !== null && xb !== null ? Math.abs(xb - xa) : 4;
-      const bodyW = Math.max(1, spacing * 0.7);
+      if (xa === null) return;
+      const spacing = xb !== null ? Math.abs(xb - xa) : 4;
+      const xAt = (i: number) => xa + (i - i0) * spacing;
 
+      const refA = bars[i0].high;
+      const refB = bars[i0].low;
+      const yA = this._series.priceToCoordinate(refA);
+      const yB = this._series.priceToCoordinate(refB);
+      const scaleY =
+        yA !== null && yB !== null && refA !== refB
+          ? (yB - yA) / (refB - refA)
+          : null;
+      const yAt = (p: number): number | null =>
+        scaleY !== null && yA !== null ? yA + (p - refA) * scaleY : null;
+
+      // Per-pixel-column aggregation (same approach as the egui renderer):
+      // when several bars land on one column, draw a single column candle —
+      // O(pane width) draw calls instead of O(bars).
+      const bw = Math.max(1, spacing * 0.7);
+      let col = -Infinity;
+      let bo = 0;
+      let bh = -Infinity;
+      let bl = Infinity;
+      let bc = 0;
+      const emit = () => {
+        if (col === -Infinity) return;
+        const yh = yAt(bh);
+        const yl = yAt(bl);
+        const yo = yAt(bo);
+        const yc = yAt(bc);
+        if (yh === null || yl === null || yo === null || yc === null) return;
+        ctx.fillStyle = bc >= bo ? UP : DOWN;
+        const xc = col + 0.5;
+        ctx.fillRect(Math.round(xc) - 0.5, yh, 1, Math.max(1, yl - yh));
+        ctx.fillRect(xc - bw / 2, Math.min(yo, yc), bw, Math.max(1, Math.abs(yc - yo)));
+      };
       for (let i = i0; i <= i1; i++) {
+        const c = Math.floor(xAt(i));
         const b = bars[i];
-        const xc = this._ts.logicalToCoordinate(i as Logical);
-        if (xc === null) continue;
-        const yh = this._series.priceToCoordinate(b.high);
-        const yl = this._series.priceToCoordinate(b.low);
-        const yo = this._series.priceToCoordinate(b.open);
-        const yc = this._series.priceToCoordinate(b.close);
-        if (yh === null || yl === null || yo === null || yc === null) continue;
-        ctx.fillStyle = b.close >= b.open ? UP : DOWN;
-        // wick (1px, pixel-snapped)
-        const xw = Math.round(xc) - 0.5;
-        ctx.fillRect(xw, Math.min(yh, yl), 1, Math.max(1, Math.abs(yl - yh)));
-        // body
-        const yTop = Math.min(yo, yc);
-        ctx.fillRect(
-          xc - bodyW / 2,
-          yTop,
-          bodyW,
-          Math.max(1, Math.abs(yc - yo)),
-        );
+        if (c !== col) {
+          emit();
+          col = c;
+          bo = b.open;
+          bh = b.high;
+          bl = b.low;
+          bc = b.close;
+        } else {
+          if (b.high > bh) bh = b.high;
+          if (b.low < bl) bl = b.low;
+          bc = b.close;
+        }
       }
+      emit();
 
-      // Indicator polylines over the same visible range; null/NaN breaks a
-      // segment (warmup gaps).
+      // Indicator polylines, one vertex per pixel column (last value wins);
+      // null/NaN breaks a segment (warmup gaps).
       for (const line of this._lines) {
         ctx.strokeStyle = line.color;
         ctx.lineWidth = line.width;
         ctx.beginPath();
         let pen = false;
+        let curCol = -Infinity;
+        let curY = 0;
+        let penX = 0;
         for (let i = i0; i <= i1; i++) {
           const v = line.data[i];
+          const c = Math.floor(xAt(i));
           if (v === null || v === undefined || !Number.isFinite(v)) {
+            if (curCol !== -Infinity) {
+              pen ? ctx.lineTo(penX, curY) : ctx.moveTo(curCol + 0.5, curY);
+              pen = true;
+            }
             pen = false;
+            curCol = -Infinity;
             continue;
           }
-          const xc = this._ts.logicalToCoordinate(i as Logical);
-          const y = this._series.priceToCoordinate(v);
-          if (xc === null || y === null) continue;
-          if (pen) ctx.lineTo(xc, y);
-          else ctx.moveTo(xc, y);
-          pen = true;
+          const y = yAt(v);
+          if (y === null) continue;
+          if (c !== curCol) {
+            if (curCol !== -Infinity) {
+              pen ? ctx.lineTo(penX, curY) : ctx.moveTo(curCol + 0.5, curY);
+              pen = true;
+            }
+            curCol = c;
+            penX = c + 0.5;
+          }
+          curY = y;
+        }
+        if (curCol !== -Infinity) {
+          if (pen) ctx.lineTo(penX, curY);
+          else ctx.moveTo(penX, curY);
         }
         ctx.stroke();
       }
