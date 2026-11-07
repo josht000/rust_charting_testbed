@@ -1,0 +1,16 @@
+[
+  {
+    "symbol": "SPY",
+    "bid": 540.2,
+    "ask": 540.25,
+    "last": 540.22,
+    "timestamp_ms": 1735689600000
+  },
+  {
+    "symbol": "BTC/USD",
+    "bid": 94500.0,
+    "ask": 94525.0,
+    "last": 94510.0,
+    "timestamp_ms": 1735689600000
+  }
+]

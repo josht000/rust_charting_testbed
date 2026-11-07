@@ -1,0 +1,767 @@
+import { ScrollView } from "std-widgets.slint";
+
+export struct AxisTick {
+    position: float,
+    label: string,
+}
+
+export struct ChartItem {
+    id: int,
+    symbol: string,
+    linked: bool,
+    selected: bool,
+    image: image,
+    time-ticks: [AxisTick],
+    price-ticks: [AxisTick],
+    current-price: AxisTick,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    column-divider: bool,
+    row-divider: bool,
+}
+
+component ChartAxes inherits Rectangle {
+    in property <[AxisTick]> time-ticks;
+    in property <[AxisTick]> price-ticks;
+    in property <AxisTick> current-price;
+    in property <length> plot-width;
+    in property <length> plot-height;
+    background: #171717;
+    axis_price := Rectangle {
+        x: root.plot-width;
+        y: 0px;
+        width: parent.width - self.x;
+        height: root.plot-height;
+        clip: true;
+        Rectangle { x: 0px; y: 0px; width: 1px; height: 100%; background: #414141; }
+        for tick[index] in root.price-ticks : Text {
+            visible: mod(index, max(1, ceil(root.price-ticks.length * 22px / max(1px, parent.height)))) == 0
+                && (root.current-price.label == "" || abs(parent.height * (tick.position - root.current-price.position)) >= 15px);
+            x: 4px;
+            y: parent.height * tick.position - self.height / 2;
+            width: parent.width - 4px;
+            height: 14px;
+            text: tick.label;
+            color: #bdbdbd;
+            font-size: 9px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        current_price_tag := Rectangle {
+            visible: root.current-price.label != "";
+            x: 0px;
+            y: parent.height * root.current-price.position - self.height / 2;
+            width: parent.width;
+            height: 16px;
+            Path {
+                x: 0px; y: 0px; width: 7px; height: 16px;
+                viewbox-width: 7; viewbox-height: 16;
+                fill: #e68a00;
+                MoveTo { x: 0; y: 8; }
+                LineTo { x: 7; y: 0; }
+                LineTo { x: 7; y: 16; }
+                Close { }
+            }
+            Rectangle {
+                x: 7px; y: 0px; width: parent.width - 7px; height: 100%;
+                background: #e68a00;
+                Text {
+                    width: 100%; height: 100%;
+                    text: root.current-price.label;
+                    color: #141414; font-size: 10px; font-weight: 700;
+                    horizontal-alignment: center; vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+    axis_time := Rectangle {
+        x: 0px;
+        y: root.plot-height;
+        width: root.plot-width;
+        height: parent.height - self.y;
+        clip: true;
+        Rectangle { x: 0px; y: 0px; width: 100%; height: 1px; background: #414141; }
+        for tick[index] in root.time-ticks : Text {
+            visible: mod(index, max(1, ceil(root.time-ticks.length * 90px / max(1px, parent.width)))) == 0;
+            x: parent.width * tick.position - self.width / 2;
+            width: min(96px, parent.width);
+            height: parent.height;
+            text: tick.label;
+            color: #bdbdbd;
+            font-size: 9px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+    Text {
+        x: root.plot-width;
+        y: root.plot-height;
+        width: parent.width - self.x;
+        height: parent.height - self.y;
+        text: "UTC";
+        color: #888888;
+        font-size: 9px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+component ToolButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> selected;
+    callback clicked;
+    width: 50px;
+    height: 34px;
+    border-radius: 5px;
+    background: selected ? #1c3e3a : #00000000;
+    Text {
+        text: root.label;
+        width: 100%;
+        height: 100%;
+        color: root.selected ? #52d7b6 : #a6a6a6;
+        font-size: 10px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    TouchArea { clicked => { root.clicked(); } }
+}
+
+component OrderButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> positive;
+    in property <bool> selected;
+    callback clicked;
+    width: 110px;
+    height: 34px;
+    border-radius: 5px;
+    background: selected ? (positive ? #155748 : #512b36) : #222222;
+    Text {
+        text: root.label;
+        color: positive ? #74e0bd : #f28a98;
+        font-size: 11px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    TouchArea { clicked => { root.clicked(); } }
+}
+
+component WindowControl inherits Rectangle {
+    in property <string> kind;
+    in property <bool> maximized;
+    callback clicked;
+    width: 30px;
+    height: 28px;
+    background: touch.has-hover ? (kind == "close" ? #5c3030 : #393939) : #00000000;
+    accessible-role: button;
+    accessible-label: kind == "minimize" ? "Minimize" : kind == "maximize" ? (maximized ? "Restore" : "Maximize") : "Close";
+    if kind == "minimize": Rectangle {
+        x: 10px; y: 17px; width: 10px; height: 1px; background: #d3d3d3;
+    }
+    if kind == "maximize" && maximized: Rectangle {
+        x: 12px; y: 7px; width: 9px; height: 8px;
+        background: #191919; border-color: #d3d3d3; border-width: 1px;
+    }
+    if kind == "maximize": Rectangle {
+        x: 10px; y: 9px; width: 10px; height: 9px;
+        background: maximized ? #191919 : #00000000; border-color: #d3d3d3; border-width: 1px;
+    }
+    if kind == "close": Path {
+        x: 10px; y: 9px; width: 10px; height: 10px;
+        viewbox-width: 10; viewbox-height: 10;
+        stroke: #d3d3d3; stroke-width: 1px;
+        MoveTo { x: 0; y: 0; } LineTo { x: 10; y: 10; }
+        MoveTo { x: 10; y: 0; } LineTo { x: 0; y: 10; }
+    }
+    touch := TouchArea { clicked => { root.clicked(); } }
+}
+
+export component CompactChartWindow inherits Window {
+    title: "DigiTrader chart";
+    preferred-width: 420px;
+    preferred-height: 270px;
+    min-width: 240px;
+    min-height: 160px;
+    no-frame: true;
+    resize-border-width: 6px;
+    background: #141414;
+    in property <string> symbol;
+    in property <image> chart-image;
+    in property <[AxisTick]> time-ticks;
+    in property <[AxisTick]> price-ticks;
+    in property <AxisTick> current-price;
+    VerticalLayout {
+        spacing: 0px;
+        Rectangle {
+            height: 30px;
+            background: #191919;
+            WindowMoveArea {
+                HorizontalLayout {
+                    padding-left: 8px; padding-right: 4px; spacing: 2px;
+                    Text {
+                        text: root.symbol + "  |  Sample chart";
+                        color: #ededed; font-size: 12px; font-weight: 700;
+                        vertical-alignment: center; horizontal-stretch: 1;
+                        min-width: 0px; overflow: elide;
+                    }
+                    pop_minimize := WindowControl { kind: "minimize"; clicked => { root.minimized = true; } }
+                    pop_maximize := WindowControl { kind: "maximize"; maximized: root.maximized; clicked => { root.maximized = !root.maximized; } }
+                    pop_close := WindowControl { kind: "close"; clicked => { root.close(); } }
+                }
+            }
+        }
+        Rectangle {
+            vertical-stretch: 1;
+            min-height: 0px;
+            ChartAxes {
+                x: 0px; y: 0px; width: 100%; height: 100%;
+                time-ticks: root.time-ticks;
+                price-ticks: root.price-ticks;
+                current-price: root.current-price;
+                plot-width: max(0px, self.width - 56px);
+                plot-height: max(0px, self.height - 18px);
+            }
+            Image {
+                source: root.chart-image;
+                image-fit: fill;
+                x: 0px; y: 0px;
+                width: max(0px, parent.width - 56px);
+                height: max(0px, parent.height - 18px);
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "DigiTrader";
+    background: #101010;
+    preferred-width: 1540px;
+    preferred-height: 920px;
+    min-width: 800px;
+    min-height: 520px;
+    no-frame: true;
+    resize-border-width: 6px;
+
+    in property <bool> desktop-controls: true;
+    in property <string> symbol: "SPY";
+    in property <string> market-state: "SIMULATED";
+    in property <string> account-equity: "$25,430.80";
+    in property <string> buying-power: "$18,200.00";
+    in property <string> bid-price: "540.24";
+    in property <string> ask-price: "540.26";
+    in property <string> connection-state: "SIMULATED DATA";
+    in property <string> active-tool: "Cursor";
+    in-out property <string> order-side: "buy";
+    in-out property <string> order-kind: "limit";
+    in-out property <string> order-price: "540.25";
+    in-out property <string> order-status: "Preview only  ·  No live broker connection";
+    in property <string> interaction-status: "Ready";
+    in property <image> chart-image;
+    in property <[ChartItem]> charts;
+
+    callback tool-selected(string);
+    callback chart-symbol-submitted(int, string) -> string;
+    callback order-submitted(string, string, string, string);
+    callback chart-resized(int, float, float);
+    callback chart-pointer(float, float, bool);
+    callback chart-zoomed(float, float);
+    callback chart-add();
+    callback chart-select(int);
+    callback chart-remove(int);
+    callback chart-link(int);
+    callback chart-popout(int);
+    callback grid-resize(int, bool, float, float);
+
+    changed order-side => { root.order-status = "Review order again  ·  No live broker connection"; }
+    changed order-kind => { root.order-status = "Review order again  ·  No live broker connection"; }
+    changed symbol => { root.order-status = "Review order again  ·  No live broker connection"; }
+
+    Rectangle {
+        background: #101010;
+        VerticalLayout {
+            spacing: 0px;
+            Rectangle {
+                height: 42px;
+                background: #191919;
+                WindowMoveArea {
+                HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 6px;
+                    spacing: 8px;
+                    Text {
+                        text: "D";
+                        color: #43d6b5;
+                        font-size: 20px;
+                        font-weight: 800;
+                        vertical-alignment: center;
+                        width: 22px;
+                    }
+                    Text {
+                        text: "DIGITRADER";
+                        color: #f0f0f0;
+                        font-size: 14px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                        width: 105px;
+                    }
+                    Rectangle { horizontal-stretch: 1; }
+                    Text {
+                        text: root.market-state;
+                        color: #43d6b5;
+                        font-size: 10px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
+                    Rectangle { width: 1px; height: 24px; background: #333333; }
+                    Text {
+                        text: "◉";
+                        color: #43d6b5;
+                        font-size: 14px;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        text: "SIM";
+                        color: #43d6b5;
+                        font-size: 10px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
+                    if root.desktop-controls: app_minimize := WindowControl { kind: "minimize"; clicked => { root.minimized = true; } }
+                    if root.desktop-controls: app_maximize := WindowControl { kind: "maximize"; maximized: root.maximized; clicked => { root.maximized = !root.maximized; } }
+                    if root.desktop-controls: app_close := WindowControl { kind: "close"; clicked => { root.close(); } }
+                }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 0px;
+                Rectangle {
+                    width: 64px;
+                    background: #171717;
+                    VerticalLayout {
+                        padding-top: 6px;
+                        padding-left: 7px;
+                        padding-right: 7px;
+                        spacing: 2px;
+                        tool_cursor := ToolButton { label: "CURSOR"; selected: root.active-tool == "Cursor"; clicked => { root.tool-selected("Cursor"); } }
+                        tool_trend := ToolButton { label: "TREND"; selected: root.active-tool == "Trend line"; clicked => { root.tool-selected("Trend line"); } }
+                        tool_horizontal := ToolButton { label: "HORIZ"; selected: root.active-tool == "Horizontal line"; clicked => { root.tool-selected("Horizontal line"); } }
+                        tool_vertical := ToolButton { label: "VERT"; selected: root.active-tool == "Vertical line"; clicked => { root.tool-selected("Vertical line"); } }
+                        tool_measure := ToolButton { label: "MEASURE"; selected: root.active-tool == "Measure"; clicked => { root.tool-selected("Measure"); } }
+                        tool_crosshair := ToolButton { label: "CROSS"; selected: root.active-tool == "Crosshair"; clicked => { root.tool-selected("Crosshair"); } }
+                        tool_ray := ToolButton { label: "RAY"; selected: root.active-tool == "Ray"; clicked => { root.tool-selected("Ray"); } }
+                        tool_erase := ToolButton { label: "ERASE"; selected: root.active-tool == "Eraser"; clicked => { root.tool-selected("Eraser"); } }
+                        Rectangle { vertical-stretch: 1; }
+                        Rectangle { height: 10px; }
+                    }
+                }
+
+                VerticalLayout {
+                    padding: 6px;
+                    spacing: 5px;
+                    Rectangle {
+                        height: 34px;
+                        background: #191919;
+                        border-color: #292929;
+                        border-width: 1px;
+                        border-radius: 7px;
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            spacing: 8px;
+                            Rectangle { horizontal-stretch: 1; }
+                            chart_add_button := Rectangle {
+                                width: 92px;
+                                height: 30px;
+                                border-radius: 5px;
+                                background: #1c3e3a;
+                                Text { text: "+ CHART"; color: #8fe6d0; font-size: 11px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; width: 100%; height: 100%; }
+                                TouchArea { clicked => { root.chart-add(); } }
+                            }
+                        }
+                    }
+
+                    grid := Rectangle {
+                        vertical-stretch: 1;
+                        clip: true;
+                        for chart in root.charts : chart_tile := Rectangle {
+                            x: grid.width * chart.x;
+                            y: grid.height * chart.y;
+                            width: grid.width * chart.width;
+                            height: grid.height * chart.height;
+                            background: #141414;
+                            border-color: #383838;
+                            border-width: 1px;
+                            clip: true;
+                            VerticalLayout {
+                                spacing: 0px;
+                                HorizontalLayout {
+                                    height: 24px;
+                                    padding-left: 4px;
+                                    spacing: 2px;
+                                    chart_select_button := Rectangle {
+                                        horizontal-stretch: 1;
+                                        min-width: 0px;
+                                        in property <string> current-symbol: chart.symbol;
+                                        background: chart_symbol_input.has-focus ? #303030 : #1d1d1d;
+                                        border-color: chart_symbol_input.has-focus ? #a0a0a0 : #383838;
+                                        border-width: 1px;
+                                        border-radius: 3px;
+                                        clip: true;
+                                        changed current-symbol => {
+                                            if (!chart_symbol_input.has-focus) { chart_symbol_input.text = self.current-symbol; }
+                                        }
+                                        chart_symbol_input := TextInput {
+                                            x: 2px;
+                                            width: max(parent.width - 4px, self.preferred-width + 2px);
+                                            height: 100%;
+                                            text: chart.symbol;
+                                            color: #ededed;
+                                            font-size: 11px;
+                                            font-weight: 700;
+                                            vertical-alignment: center;
+                                            accessible-label: "Chart symbol";
+                                            changed has-focus => {
+                                                if (self.has-focus) {
+                                                    if (!chart.selected) { root.chart-select(chart.id); }
+                                                    self.select-all();
+                                                } else {
+                                                    self.text = chart.symbol;
+                                                    self.x = 2px;
+                                                }
+                                            }
+                                            cursor-position-changed(position) => {
+                                                if (self.has-focus && position.x + self.x > parent.width - 3px) {
+                                                    self.x = parent.width - 3px - position.x;
+                                                } else if (position.x + self.x < 2px) {
+                                                    self.x = 2px - position.x;
+                                                }
+                                            }
+                                            key-pressed(event) => {
+                                                if (event.text == Key.Escape) {
+                                                    self.text = chart.symbol;
+                                                    self.clear-focus();
+                                                    return accept;
+                                                }
+                                                return reject;
+                                            }
+                                            accepted => { self.text = root.chart-symbol-submitted(chart.id, self.text); }
+                                        }
+                                    }
+                                    chart_link_button := Rectangle {
+                                        width: 32px;
+                                        background: chart.linked ? #1c3e3a : #313131;
+                                        Text { text: chart.linked ? "LINK" : "SOLO"; width: 100%; height: 100%; color: #b7eee0; font-size: 9px; horizontal-alignment: center; vertical-alignment: center; }
+                                        TouchArea { clicked => { root.chart-link(chart.id); } }
+                                    }
+                                    chart_pop_button := Rectangle {
+                                        width: 28px;
+                                        background: #2a2a2a;
+                                        Text { text: "POP"; width: 100%; height: 100%; color: #d1d1d1; font-size: 9px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                                        TouchArea { clicked => { root.chart-popout(chart.id); } }
+                                    }
+                                    chart_remove_button := Rectangle {
+                                        width: 20px;
+                                        Text { text: "x"; width: 100%; height: 100%; color: #ed8792; font-size: 14px; horizontal-alignment: center; vertical-alignment: center; }
+                                        TouchArea { clicked => { root.chart-remove(chart.id); } }
+                                    }
+                                }
+                                Rectangle {
+                                    vertical-stretch: 1;
+                                    clip: true;
+                                    ChartAxes {
+                                        x: 0px; y: 0px; width: 100%; height: 100%;
+                                        time-ticks: chart.time-ticks;
+                                        price-ticks: chart.price-ticks;
+                                        current-price: chart.current-price;
+                                        plot-width: max(0px, self.width - 56px);
+                                        plot-height: max(0px, self.height - 18px);
+                                    }
+                                    Image { source: chart.image; image-fit: fill; x: 0px; y: 0px; width: max(0px, parent.width - 56px); height: max(0px, parent.height - 18px); }
+                                    ta := TouchArea {
+                                        x: 0px; y: 0px;
+                                        width: max(0px, parent.width - 56px);
+                                        height: max(0px, parent.height - 18px);
+                                        init => { root.chart-resized(chart.id, self.width / 1px, self.height / 1px); }
+                                        changed width => { root.chart-resized(chart.id, self.width / 1px, self.height / 1px); }
+                                        changed height => { root.chart-resized(chart.id, self.width / 1px, self.height / 1px); }
+                                        moved => {
+                                            if (self.pressed) { root.chart-pointer(self.mouse-x / 1px, self.mouse-y / 1px, true); }
+                                        }
+                                        pointer-event(e) => {
+                                            if (e.kind == PointerEventKind.down) {
+                                                if (!chart.selected) { root.chart-select(chart.id); }
+                                                root.chart-pointer(self.mouse-x / 1px, self.mouse-y / 1px, true);
+                                            }
+                                            if (e.kind == PointerEventKind.up) { root.chart-pointer(self.mouse-x / 1px, self.mouse-y / 1px, false); }
+                                        }
+                                        scroll-event(e) => {
+                                            if (!chart.selected) { root.chart-select(chart.id); }
+                                            root.chart-zoomed(e.delta-y / 1px, self.mouse-x / 1px);
+                                            return accept;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        for chart in root.charts : column_divider := Rectangle {
+                            visible: chart.column-divider;
+                            x: grid.width * (chart.x + chart.width) - 4px;
+                            y: grid.height * chart.y;
+                            width: 8px;
+                            height: grid.height * chart.height;
+                            column_divider_line := Rectangle {
+                                x: 3.5px;
+                                width: 1px;
+                                height: 100%;
+                                background: #414141;
+                            }
+                            TouchArea {
+                                mouse-cursor: col-resize;
+                                in-out property <length> press-x;
+                                pointer-event(e) => { if (e.kind == PointerEventKind.down) { self.press-x = self.mouse-x; } }
+                                moved => { if (self.pressed && grid.width > 0px) { root.grid-resize(chart.id, true, (self.mouse-x - self.press-x) / grid.width, 130px / grid.width); } }
+                            }
+                        }
+                        for chart in root.charts : row_divider := Rectangle {
+                            visible: chart.row-divider;
+                            x: 0px;
+                            y: grid.height * (chart.y + chart.height) - 4px;
+                            width: grid.width;
+                            height: 8px;
+                            row_divider_line := Rectangle {
+                                y: 3.5px;
+                                width: 100%;
+                                height: 1px;
+                                background: #414141;
+                            }
+                            TouchArea {
+                                mouse-cursor: row-resize;
+                                in-out property <length> press-y;
+                                pointer-event(e) => { if (e.kind == PointerEventKind.down) { self.press-y = self.mouse-y; } }
+                                moved => { if (self.pressed && grid.height > 0px) { root.grid-resize(chart.id, false, (self.mouse-y - self.press-y) / grid.height, 64px / grid.height); } }
+                            }
+                        }
+                        for chart in root.charts : selected_chart_outline := Rectangle {
+                            visible: chart.selected;
+                            x: grid.width * chart.x;
+                            y: grid.height * chart.y;
+                            width: grid.width * chart.width;
+                            height: grid.height * chart.height;
+                            border-color: #bdbdbd;
+                            border-width: 1px;
+                        }
+                    }
+                    Rectangle {
+                        height: 18px;
+                        Text { text: "●  " + root.active-tool + "  ·  " + root.interaction-status; color: #a4a4a4; font-size: 10px; width: 100%; height: 100%; vertical-alignment: center; overflow: elide; }
+                    }
+                }
+
+                Rectangle {
+                    width: 286px;
+                    background: #171717;
+                    border-color: #292929;
+                    border-width: 1px;
+                    trade_scroll := ScrollView {
+                    width: 100%;
+                    height: 100%;
+                    content-width: self.width;
+                    VerticalLayout {
+                        spacing: 0px;
+                        Rectangle {
+                            height: 32px;
+                            background: #191919;
+                            HorizontalLayout {
+                                padding-left: 16px;
+                                Text { text: "Trade"; color: #f1f1f1; font-size: 13px; font-weight: 700; vertical-alignment: center; }
+                                Rectangle { horizontal-stretch: 1; }
+                                Text { text: "LEVEL 1"; color: #808080; font-size: 9px; font-weight: 700; vertical-alignment: center; }
+                                Rectangle { width: 16px; }
+                            }
+                        }
+                        Rectangle { height: 1px; background: #303030; }
+                        HorizontalLayout {
+                            padding: 7px;
+                            spacing: 6px;
+                            vertical-stretch: 0;
+                            Rectangle {
+                                horizontal-stretch: 1;
+                                height: 44px;
+                                background: #142a2a;
+                                border-color: #23564f;
+                                border-width: 1px;
+                                border-radius: 5px;
+                                VerticalLayout {
+                                    padding: 7px;
+                                    spacing: 2px;
+                                    Text { text: "BID"; color: #62cbb2; font-size: 9px; font-weight: 700; }
+                                    Text { text: root.bid-price; color: #d7eee8; font-size: 14px; font-weight: 700; }
+                                }
+                            }
+                            Rectangle {
+                                horizontal-stretch: 1;
+                                height: 44px;
+                                background: #2b1d27;
+                                border-color: #64404c;
+                                border-width: 1px;
+                                border-radius: 5px;
+                                VerticalLayout {
+                                    padding: 7px;
+                                    spacing: 2px;
+                                    Text { text: "ASK"; color: #ed8792; font-size: 9px; font-weight: 700; }
+                                    Text { text: root.ask-price; color: #f3dfe2; font-size: 14px; font-weight: 700; }
+                                }
+                            }
+                        }
+                        Rectangle { height: 1px; background: #303030; }
+                        VerticalLayout {
+                            padding: 8px;
+                            spacing: 5px;
+                            vertical-stretch: 0;
+                            Text { text: "ORDER TICKET"; color: #909090; font-size: 10px; font-weight: 700; }
+                            Text { text: "Side"; color: #aaaaaa; font-size: 10px; }
+                            HorizontalLayout {
+                                spacing: 6px;
+                                buy_button := OrderButton {
+                                    label: "BUY"; positive: true; selected: root.order-side == "buy";
+                                    clicked => { root.order-side = "buy"; }
+                                }
+                                sell_button := OrderButton {
+                                    label: "SELL"; positive: false; selected: root.order-side == "sell";
+                                    clicked => { root.order-side = "sell"; }
+                                }
+                            }
+                            Text { text: "Order type"; color: #aaaaaa; font-size: 10px; }
+                            order_kind_button := Rectangle {
+                                height: 34px;
+                                background: #191919;
+                                border-color: #383838;
+                                border-width: 1px;
+                                border-radius: 5px;
+                                HorizontalLayout {
+                                    padding-left: 10px;
+                                    padding-right: 10px;
+                                    Text {
+                                        text: root.order-kind == "limit" ? "Limit" : "Market";
+                                        color: #f1f1f1;
+                                        font-size: 11px;
+                                        vertical-alignment: center;
+                                    }
+                                    Rectangle { horizontal-stretch: 1; }
+                                    Text {
+                                        text: "v";
+                                        color: #909090;
+                                        font-size: 12px;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                                TouchArea {
+                                    clicked => {
+                                        root.order-kind = root.order-kind == "limit" ? "market" : "limit";
+                                    }
+                                }
+                            }
+                            HorizontalLayout {
+                                spacing: 8px;
+                                VerticalLayout {
+                                    spacing: 4px;
+                                    Text { text: "Shares"; color: #aaaaaa; font-size: 10px; }
+                                    quantity_input := TextInput {
+                                        text: "10"; color: #f1f1f1; font-size: 12px;
+                                        edited => { root.order-status = "Review order again  ·  No live broker connection"; }
+                                    }
+                                }
+                                VerticalLayout {
+                                    spacing: 4px;
+                                    Text { text: "Limit price"; color: #aaaaaa; font-size: 10px; }
+                                    price_input := TextInput {
+                                        text <=> root.order-price; color: #f1f1f1; font-size: 12px;
+                                        edited => { root.order-status = "Review order again  ·  No live broker connection"; }
+                                    }
+                                }
+                            }
+                            Rectangle { height: 4px; }
+                            Text { text: "Review to calculate estimated value"; color: #bcbcbc; font-size: 10px; }
+                            Rectangle { height: 4px; }
+                            order_review_button := Rectangle {
+                                width: 220px;
+                                height: 34px;
+                                border-radius: 5px;
+                                background: #2e2e2e;
+                                border-color: #494949;
+                                border-width: 1px;
+                                Text {
+                                    text: "Review order";
+                                    color: #b7eee0;
+                                    font-size: 11px;
+                                    font-weight: 700;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                                TouchArea {
+                                    clicked => {
+                                        root.order-submitted(
+                                            root.order-side,
+                                            root.order-kind,
+                                            quantity_input.text,
+                                            price_input.text
+                                        );
+                                    }
+                                }
+                            }
+                            Text {
+                                text: root.order-status;
+                                color: #8d8d8d;
+                                font-size: 9px;
+                                horizontal-alignment: center;
+                            }
+                        }
+                        Rectangle { height: 1px; background: #303030; }
+                        VerticalLayout {
+                            padding: 8px;
+                            vertical-stretch: 0;
+                            spacing: 7px;
+                            HorizontalLayout {
+                                Text { text: "ACCOUNT"; color: #909090; font-size: 10px; font-weight: 700; }
+                                Rectangle { horizontal-stretch: 1; }
+                                Text { text: "SIMULATED"; color: #e2b96e; font-size: 9px; font-weight: 700; }
+                            }
+                            HorizontalLayout {
+                                Text { text: "Equity"; color: #a7a7a7; font-size: 10px; }
+                                Rectangle { horizontal-stretch: 1; }
+                                Text { text: root.account-equity; color: #ededed; font-size: 11px; font-weight: 700; }
+                            }
+                            HorizontalLayout {
+                                Text { text: "Buying power"; color: #a7a7a7; font-size: 10px; }
+                                Rectangle { horizontal-stretch: 1; }
+                                Text { text: root.buying-power; color: #ededed; font-size: 11px; font-weight: 700; }
+                            }
+                        }
+                        Rectangle { vertical-stretch: 1; }
+                    }
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 20px;
+                background: #191919;
+                HorizontalLayout {
+                    padding-left: 14px;
+                    spacing: 8px;
+                    Text { text: "●"; color: #e2b96e; font-size: 9px; vertical-alignment: center; }
+                    Text { text: root.connection-state; color: #9c9c9c; font-size: 9px; vertical-alignment: center; }
+                    Rectangle { horizontal-stretch: 1; }
+                    Text { text: "Hotkeys, themes and settings: coming later"; color: #808080; font-size: 9px; vertical-alignment: center; }
+                    Rectangle { width: 12px; }
+                }
+            }
+        }
+    }
+}
