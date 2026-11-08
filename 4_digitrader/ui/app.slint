@@ -5,6 +5,18 @@ export struct AxisTick {
     label: string,
 }
 
+export struct PriceOptions {
+    visible: bool,
+    border: string,
+    grid: bool,
+    labels: bool,
+    thickness: int,
+    glow-color: string,
+    glow: int,
+    shadow-color: string,
+    shadow: int,
+}
+
 export struct ChartItem {
     id: int,
     symbol: string,
@@ -14,6 +26,9 @@ export struct ChartItem {
     time-ticks: [AxisTick],
     price-ticks: [AxisTick],
     current-price: AxisTick,
+    price-color: string,
+    price-pattern: string,
+    price-options: PriceOptions,
     x: float,
     y: float,
     width: float,
@@ -22,14 +37,35 @@ export struct ChartItem {
     row-divider: bool,
 }
 
+component SettingChoice inherits Rectangle {
+    in property <string> label;
+    in property <bool> selected;
+    callback clicked;
+    height: 22px;
+    horizontal-stretch: 1;
+    background: root.selected ? #505050 : #303030;
+    border-color: root.selected ? #dddddd : #555555;
+    border-width: 1px;
+    Text { text: root.label; color: #eeeeee; font-size: 9px; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; }
+    TouchArea { clicked => { root.clicked(); } }
+}
+
 component ChartAxes inherits Rectangle {
     in property <[AxisTick]> time-ticks;
     in property <[AxisTick]> price-ticks;
     in property <AxisTick> current-price;
+    in property <string> price-color: "orange";
+    in property <string> price-pattern: "dashed";
+    in property <PriceOptions> price-options;
+    callback price-style-changed(string, string);
+    callback price-option-changed(string, string);
+    public function open-editor() { style_popup.show(); }
+    property <color> marker-color: root.price-color == "teal" ? #26a69a : root.price-color == "red" ? #ef5350 : root.price-color == "white" ? #dcdcdc : root.price-color == "black" ? #000000 : #e68a00;
     in property <length> plot-width;
     in property <length> plot-height;
     background: #171717;
     axis_price := Rectangle {
+        property <length> marker-top: max(0px, min(max(0px, self.height - 14px), self.height * root.current-price.position - 7px));
         x: root.plot-width;
         y: 0px;
         width: parent.width - self.x;
@@ -37,8 +73,8 @@ component ChartAxes inherits Rectangle {
         clip: true;
         Rectangle { x: 0px; y: 0px; width: 1px; height: 100%; background: #414141; }
         for tick[index] in root.price-ticks : Text {
-            visible: mod(index, max(1, ceil(root.price-ticks.length * 22px / max(1px, parent.height)))) == 0
-                && (root.current-price.label == "" || abs(parent.height * (tick.position - root.current-price.position)) >= 15px);
+            visible: root.price-options.labels && mod(index, max(1, ceil(root.price-ticks.length * 22px / max(1px, parent.height)))) == 0
+                && (!root.price-options.visible || root.current-price.label == "" || abs(parent.height * tick.position - parent.marker-top - 7px) >= 14px);
             x: 4px;
             y: parent.height * tick.position - self.height / 2;
             width: parent.width - 4px;
@@ -49,30 +85,146 @@ component ChartAxes inherits Rectangle {
             vertical-alignment: center;
             overflow: elide;
         }
+        axis_touch := TouchArea {
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) { root.open-editor(); }
+            }
+        }
         current_price_tag := Rectangle {
-            visible: root.current-price.label != "";
+            visible: root.price-options.visible && root.current-price.label != "";
             x: 0px;
-            y: parent.height * root.current-price.position - self.height / 2;
-            width: parent.width;
-            height: 16px;
-            Path {
-                x: 0px; y: 0px; width: 7px; height: 16px;
-                viewbox-width: 7; viewbox-height: 16;
-                fill: #e68a00;
-                MoveTo { x: 0; y: 8; }
-                LineTo { x: 7; y: 0; }
-                LineTo { x: 7; y: 16; }
+            y: parent.marker-top;
+            width: min(48px, parent.width);
+            height: 14px;
+            if root.current-price.position >= 0 && root.current-price.position < 1: Path {
+                x: 0.5px; y: 0.5px; width: parent.width - 1px; height: 13px;
+                viewbox-width: 47; viewbox-height: 13;
+                fill: root.marker-color; stroke: root.price-options.border == "white" ? white : root.marker-color; stroke-width: root.price-options.border == "none" ? 0px : 1px;
+                MoveTo { x: 0; y: 6.5; }
+                LineTo { x: 6; y: 0; }
+                LineTo { x: 47; y: 0; }
+                LineTo { x: 47; y: 13; }
+                LineTo { x: 6; y: 13; }
                 Close { }
             }
-            Rectangle {
-                x: 7px; y: 0px; width: parent.width - 7px; height: 100%;
-                background: #e68a00;
-                Text {
-                    width: 100%; height: 100%;
-                    text: root.current-price.label;
-                    color: #141414; font-size: 10px; font-weight: 700;
-                    horizontal-alignment: center; vertical-alignment: center;
-                    overflow: elide;
+            if root.current-price.position < 0 || root.current-price.position >= 1: Rectangle {
+                x: 0px; y: 0px; width: 100%; height: 100%;
+                background: root.marker-color; border-color: root.price-options.border == "white" ? white : root.marker-color; border-width: root.price-options.border == "none" ? 0px : 1px;
+            }
+            Text {
+                x: root.current-price.position < 0 || root.current-price.position >= 1 ? 14px : 6px;
+                width: parent.width - self.x; height: 100%;
+                text: root.current-price.label;
+                color: #141414; font-size: 9px; font-weight: 700;
+                horizontal-alignment: center; vertical-alignment: center;
+                overflow: elide;
+            }
+            if root.current-price.position < 0: Path {
+                x: 8px; y: 4px; width: 7px; height: 7px;
+                viewbox-width: 7; viewbox-height: 7; fill: #141414;
+                MoveTo { x: 0; y: 7; } LineTo { x: 3.5; y: 0; } LineTo { x: 7; y: 7; } Close { }
+            }
+            if root.current-price.position >= 1: Path {
+                x: 8px; y: 5px; width: 7px; height: 7px;
+                viewbox-width: 7; viewbox-height: 7; fill: #141414;
+                MoveTo { x: 0; y: 0; } LineTo { x: 7; y: 0; } LineTo { x: 3.5; y: 7; } Close { }
+            }
+            tag_touch := TouchArea {
+                pointer-event(e) => {
+                    if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) { root.open-editor(); }
+                }
+            }
+        }
+    }
+    style_popup := PopupWindow {
+        x: max(0px, root.plot-width - self.width);
+        y: max(0px, min(root.plot-height - self.height, axis_price.marker-top));
+        width: 218px; height: min(390px, max(120px, root.height));
+        close-policy: close-on-click-outside;
+        Rectangle {
+            background: #242424; border-width: 1px; border-color: #777777; border-radius: 4px;
+            ScrollView {
+            width: 100%; height: 100%; content-width: self.width;
+            VerticalLayout {
+                padding: 8px; spacing: 6px;
+                Text { text: "PRICE LINE STYLE"; color: #eeeeee; font-size: 10px; font-weight: 700; height: 14px; }
+                HorizontalLayout {
+                    spacing: 4px; height: 22px;
+                    style_visibility := SettingChoice { label: root.price-options.visible ? "Visible: ON" : "Visible: OFF"; selected: root.price-options.visible; clicked => { root.price-option-changed("visible", root.price-options.visible ? "false" : "true"); } }
+                }
+                HorizontalLayout {
+                    spacing: 5px; height: 22px;
+                    for color in ["orange", "teal", "red", "white"]: style_color := Rectangle {
+                        width: 27px; height: 22px;
+                        background: color == "orange" ? #e68a00 : color == "teal" ? #26a69a : color == "red" ? #ef5350 : #dcdcdc;
+                        border-width: root.price-color == color ? 2px : 1px;
+                        border-color: root.price-color == color ? white : #555555;
+                        TouchArea { clicked => { root.price-style-changed(color, root.price-pattern); } }
+                    }
+                    Rectangle { horizontal-stretch: 1; }
+                }
+                HorizontalLayout {
+                    spacing: 4px; height: 23px;
+                    for pattern in ["dashed", "solid", "dotted"]: style_pattern := Rectangle {
+                        height: 23px; horizontal-stretch: 1;
+                        background: root.price-pattern == pattern ? #4a4a4a : #303030;
+                        border-color: root.price-pattern == pattern ? #cccccc : #555555; border-width: 1px;
+                        Text { text: pattern; color: #eeeeee; font-size: 9px; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; }
+                        TouchArea { clicked => { root.price-style-changed(root.price-color, pattern); } }
+                    }
+                }
+                    Text { text: "BORDER"; color: #bbbbbb; font-size: 9px; height: 12px; }
+                    HorizontalLayout {
+                        spacing: 4px; height: 22px;
+                        for border in ["white", "color", "none"]: SettingChoice {
+                            label: border; selected: root.price-options.border == border;
+                            clicked => { root.price-option-changed("border", border); }
+                        }
+                    }
+                    Text { text: "THICKNESS"; color: #bbbbbb; font-size: 9px; height: 12px; }
+                    HorizontalLayout {
+                        spacing: 4px; height: 22px;
+                        for n in [1, 2, 3]: SettingChoice {
+                            label: n + " px"; selected: root.price-options.thickness == n;
+                            clicked => { root.price-option-changed("thickness", n + ""); }
+                        }
+                    }
+                    Text { text: "GLOW COLOR / INTENSITY"; color: #bbbbbb; font-size: 9px; height: 12px; }
+                    HorizontalLayout {
+                        spacing: 3px; height: 22px;
+                        for color in ["orange", "teal", "red", "white", "black"]: SettingChoice {
+                            label: color; selected: root.price-options.glow-color == color;
+                            clicked => { root.price-option-changed("glow_color", color); }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 4px; height: 22px;
+                        for n in [0, 1, 2]: SettingChoice {
+                            label: n == 0 ? "off" : n == 1 ? "low" : "high"; selected: root.price-options.glow == n;
+                            clicked => { root.price-option-changed("glow", n + ""); }
+                        }
+                    }
+                    Text { text: "SHADOW COLOR / INTENSITY"; color: #bbbbbb; font-size: 9px; height: 12px; }
+                    HorizontalLayout {
+                        spacing: 3px; height: 22px;
+                        for color in ["orange", "teal", "red", "white", "black"]: SettingChoice {
+                            label: color; selected: root.price-options.shadow-color == color;
+                            clicked => { root.price-option-changed("shadow_color", color); }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 4px; height: 22px;
+                        for n in [0, 1, 2]: SettingChoice {
+                            label: n == 0 ? "off" : n == 1 ? "low" : "high"; selected: root.price-options.shadow == n;
+                            clicked => { root.price-option-changed("shadow", n + ""); }
+                        }
+                    }
+                    Text { text: "Y AXIS"; color: #bbbbbb; font-size: 9px; height: 12px; }
+                    HorizontalLayout {
+                        spacing: 4px; height: 22px;
+                        SettingChoice { label: root.price-options.labels ? "Labels: ON" : "Labels: OFF"; selected: root.price-options.labels; clicked => { root.price-option-changed("labels", root.price-options.labels ? "false" : "true"); } }
+                        SettingChoice { label: root.price-options.grid ? "Grid: ON" : "Grid: OFF"; selected: root.price-options.grid; clicked => { root.price-option-changed("grid", root.price-options.grid ? "false" : "true"); } }
+                    }
                 }
             }
         }
@@ -191,10 +343,22 @@ export component CompactChartWindow inherits Window {
     resize-border-width: 6px;
     background: #141414;
     in property <string> symbol;
+    in property <bool> linked;
+    in property <string> active-tool: "Cursor";
+    in-out property <string> chart-status: "Ready";
     in property <image> chart-image;
     in property <[AxisTick]> time-ticks;
     in property <[AxisTick]> price-ticks;
     in property <AxisTick> current-price;
+    in property <string> price-color: "orange";
+    in property <string> price-pattern: "dashed";
+    in property <PriceOptions> price-options;
+    callback price-style-changed(string, string);
+    callback price-option-changed(string, string);
+    callback chart-zoomed(float, float);
+    callback chart-action(string, string) -> string;
+    callback chart-pointer(float, float, bool) -> string;
+    callback chart-resized(float, float);
     VerticalLayout {
         spacing: 0px;
         Rectangle {
@@ -203,11 +367,33 @@ export component CompactChartWindow inherits Window {
             WindowMoveArea {
                 HorizontalLayout {
                     padding-left: 8px; padding-right: 4px; spacing: 2px;
-                    Text {
-                        text: root.symbol + "  |  Sample chart";
-                        color: #ededed; font-size: 12px; font-weight: 700;
-                        vertical-alignment: center; horizontal-stretch: 1;
-                        min-width: 0px; overflow: elide;
+                    Rectangle {
+                        horizontal-stretch: 1; min-width: 35px; clip: true;
+                        in property <string> current-symbol: root.symbol;
+                        changed current-symbol => { if (!compact_symbol.has-focus) { compact_symbol.text = self.current-symbol; } }
+                        compact_symbol := TextInput {
+                            x: 2px; width: max(parent.width - 4px, self.preferred-width + 2px);
+                            height: 100%; text: root.symbol; color: #ededed;
+                            font-size: 11px; font-weight: 700; vertical-alignment: center;
+                            accessible-label: "Chart symbol";
+                            changed has-focus => {
+                                if (self.has-focus) { self.select-all(); }
+                                else { self.text = root.symbol; }
+                            }
+                            key-pressed(event) => {
+                                if (event.text == Key.Escape) { self.text = root.symbol; self.clear-focus(); return accept; }
+                                return reject;
+                            }
+                            accepted => {
+                                root.chart-status = root.chart-action("symbol", self.text);
+                                self.text = root.symbol;
+                            }
+                        }
+                    }
+                    compact_link := Rectangle {
+                        width: 38px; background: root.linked ? #1c3e3a : #313131;
+                        Text { text: root.linked ? "LINK" : "SOLO"; width: 100%; height: 100%; color: #b7eee0; font-size: 9px; horizontal-alignment: center; vertical-alignment: center; }
+                        TouchArea { clicked => { root.chart-status = root.chart-action("link", ""); } }
                     }
                     pop_minimize := WindowControl { kind: "minimize"; clicked => { root.minimized = true; } }
                     pop_maximize := WindowControl { kind: "maximize"; maximized: root.maximized; clicked => { root.maximized = !root.maximized; } }
@@ -215,14 +401,37 @@ export component CompactChartWindow inherits Window {
                 }
             }
         }
+        HorizontalLayout {
+            height: 27px; spacing: 2px; padding-left: 4px; padding-right: 4px;
+            for tool in [
+                { label: "CUR", name: "Cursor" },
+                { label: "TREND", name: "Trend line" },
+                { label: "HORIZ", name: "Horizontal line" },
+                { label: "VERT", name: "Vertical line" },
+                { label: "MEAS", name: "Measure" },
+                { label: "CROSS", name: "Crosshair" },
+                { label: "RAY", name: "Ray" },
+                { label: "ERASE", name: "Eraser" }
+            ]: compact_tool := Rectangle {
+                horizontal-stretch: 1; min-width: 0px;
+                background: root.active-tool == tool.name ? #1c3e3a : #252525;
+                Text { text: tool.label; color: #d3d3d3; font-size: 8px; width: 100%; height: 100%; horizontal-alignment: center; vertical-alignment: center; overflow: elide; }
+                TouchArea { clicked => { root.chart-status = root.chart-action("tool", tool.name); } }
+            }
+        }
         Rectangle {
             vertical-stretch: 1;
             min-height: 0px;
-            ChartAxes {
+            compact_axes := ChartAxes {
                 x: 0px; y: 0px; width: 100%; height: 100%;
                 time-ticks: root.time-ticks;
                 price-ticks: root.price-ticks;
                 current-price: root.current-price;
+                price-color: root.price-color;
+                price-pattern: root.price-pattern;
+                price-options: root.price-options;
+                price-style-changed(color, pattern) => { root.price-style-changed(color, pattern); }
+                price-option-changed(field, value) => { root.price-option-changed(field, value); }
                 plot-width: max(0px, self.width - 56px);
                 plot-height: max(0px, self.height - 18px);
             }
@@ -233,6 +442,39 @@ export component CompactChartWindow inherits Window {
                 width: max(0px, parent.width - 56px);
                 height: max(0px, parent.height - 18px);
             }
+            compact_plot_touch := TouchArea {
+                property <bool> left-down: false;
+                x: 0px; y: 0px;
+                width: max(0px, parent.width - 56px);
+                height: max(0px, parent.height - 18px);
+                init => { root.chart-resized(self.width / 1px, self.height / 1px); }
+                changed width => { root.chart-resized(self.width / 1px, self.height / 1px); }
+                changed height => { root.chart-resized(self.width / 1px, self.height / 1px); }
+                moved => {
+                    if (self.left-down && self.width > 0px && self.height > 0px) {
+                        root.chart-status = root.chart-pointer(self.mouse-x / self.width, self.mouse-y / self.height, true);
+                    }
+                }
+                pointer-event(e) => {
+                    if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right
+                        && root.price-options.visible && root.current-price.label != "" && root.current-price.position >= 0
+                        && root.current-price.position < 1
+                        && abs(self.mouse-y - self.height * root.current-price.position) < 6px) { compact_axes.open-editor(); }
+                    if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left && self.width > 0px && self.height > 0px) {
+                        self.left-down = true;
+                        root.chart-status = root.chart-pointer(self.mouse-x / self.width, self.mouse-y / self.height, true);
+                    }
+                    if (e.kind == PointerEventKind.up && e.button == PointerEventButton.left) {
+                        self.left-down = false;
+                        root.chart-pointer(0, 0, false);
+                    }
+                }
+                scroll-event(e) => {
+                    if (self.width > 0px) { root.chart-zoomed(e.delta-y / 1px, self.mouse-x / self.width); }
+                    return accept;
+                }
+            }
+            Text { text: root.chart-status; height: 16px; color: #bbbbbb; font-size: 9px; overflow: elide; }
         }
     }
 }
@@ -276,6 +518,8 @@ export component AppWindow inherits Window {
     callback chart-link(int);
     callback chart-popout(int);
     callback grid-resize(int, bool, float, float);
+    callback price-style-changed(int, string, string);
+    callback price-option-changed(int, string, string);
 
     changed order-side => { root.order-status = "Review order again  ·  No live broker connection"; }
     changed order-kind => { root.order-status = "Review order again  ·  No live broker connection"; }
@@ -474,11 +718,16 @@ export component AppWindow inherits Window {
                                 Rectangle {
                                     vertical-stretch: 1;
                                     clip: true;
-                                    ChartAxes {
+                                    chart_axes := ChartAxes {
                                         x: 0px; y: 0px; width: 100%; height: 100%;
                                         time-ticks: chart.time-ticks;
                                         price-ticks: chart.price-ticks;
                                         current-price: chart.current-price;
+                                        price-color: chart.price-color;
+                                        price-pattern: chart.price-pattern;
+                                        price-options: chart.price-options;
+                                        price-style-changed(color, pattern) => { root.price-style-changed(chart.id, color, pattern); }
+                                        price-option-changed(field, value) => { root.price-option-changed(chart.id, field, value); }
                                         plot-width: max(0px, self.width - 56px);
                                         plot-height: max(0px, self.height - 18px);
                                     }
@@ -494,11 +743,17 @@ export component AppWindow inherits Window {
                                             if (self.pressed) { root.chart-pointer(self.mouse-x / 1px, self.mouse-y / 1px, true); }
                                         }
                                         pointer-event(e) => {
-                                            if (e.kind == PointerEventKind.down) {
+                                            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right
+                                                && chart.price-options.visible && chart.current-price.label != "" && chart.current-price.position >= 0
+                                                && chart.current-price.position < 1
+                                                && abs(self.mouse-y - self.height * chart.current-price.position) < 6px) {
+                                                chart_axes.open-editor();
+                                            }
+                                            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
                                                 if (!chart.selected) { root.chart-select(chart.id); }
                                                 root.chart-pointer(self.mouse-x / 1px, self.mouse-y / 1px, true);
                                             }
-                                            if (e.kind == PointerEventKind.up) { root.chart-pointer(self.mouse-x / 1px, self.mouse-y / 1px, false); }
+                                            if (e.kind == PointerEventKind.up && e.button == PointerEventButton.left) { root.chart-pointer(self.mouse-x / 1px, self.mouse-y / 1px, false); }
                                         }
                                         scroll-event(e) => {
                                             if (!chart.selected) { root.chart-select(chart.id); }

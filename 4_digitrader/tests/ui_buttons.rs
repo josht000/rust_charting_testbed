@@ -366,10 +366,7 @@ fn buttons_produce_observable_actions() {
     assert_eq!(ui.get_interaction_status(), "Compact chart opened");
     click(&ui, "chart_remove_button", 1);
     assert_eq!(ui.get_charts().row_count(), 1);
-    assert_eq!(
-        ui.get_interaction_status(),
-        "Chart removed from grid; pop-out remains open"
-    );
+    assert_eq!(ui.get_interaction_status(), "Chart closed");
 
     click(&ui, "sell_button", 0);
     assert_eq!(ui.get_order_side(), "sell");
@@ -565,6 +562,65 @@ fn buttons_produce_observable_actions() {
     pop.window().set_size(LogicalSize::new(240.0, 160.0));
     pop.show().unwrap();
     mock_elapsed_time(Duration::from_millis(1));
+    let actions = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let captured = actions.clone();
+    pop.on_chart_action(move |action, value| {
+        captured
+            .borrow_mut()
+            .push((action.to_string(), value.to_string()));
+        "".into()
+    });
+    for (index, expected) in [
+        "Cursor",
+        "Trend line",
+        "Horizontal line",
+        "Vertical line",
+        "Measure",
+        "Crosshair",
+        "Ray",
+        "Eraser",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let control = ElementHandle::find_by_element_id(&pop, "CompactChartWindow::compact_tool")
+            .nth(index)
+            .unwrap();
+        let p = control.absolute_position();
+        let size = control.size();
+        assert!(size.width > 0.0 && size.height > 0.0 && p.x >= 0.0 && p.x + size.width <= 240.0);
+        control.mock_single_click(PointerEventButton::Left);
+        assert_eq!(
+            actions.borrow().last().unwrap(),
+            &("tool".to_string(), expected.to_string())
+        );
+    }
+    ElementHandle::find_by_element_id(&pop, "CompactChartWindow::compact_link")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+    assert_eq!(actions.borrow().last().unwrap().0, "link");
+    let plot = ElementHandle::find_by_element_id(&pop, "CompactChartWindow::compact_plot_touch")
+        .next()
+        .unwrap();
+    assert!(plot.size().width > 0.0 && plot.size().height > 0.0);
+    let pointer_events = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let captured = pointer_events.clone();
+    pop.on_chart_pointer(move |x, y, down| {
+        captured.borrow_mut().push((x, y, down));
+        if down {
+            "Choose the second anchor".into()
+        } else {
+            "".into()
+        }
+    });
+    plot.mock_single_click(PointerEventButton::Left);
+    assert!(pointer_events
+        .borrow()
+        .iter()
+        .any(|e| e.2 && e.0 >= 0.0 && e.0 <= 1.0));
+    assert!(pointer_events.borrow().iter().any(|e| !e.2));
+    assert_eq!(pop.get_chart_status(), "Choose the second anchor");
     for id in ["pop_minimize", "pop_maximize", "pop_close"] {
         let name = format!("CompactChartWindow::{id}");
         let control = ElementHandle::find_by_element_id(&pop, &name)

@@ -14,6 +14,140 @@ pub struct AxisTick {
 const BACKGROUND: Color = Color(17, 17, 17);
 const GRID: Color = Color(38, 38, 38);
 const LAST_PRICE: Color = Color(230, 138, 0);
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PriceColor {
+    #[default]
+    Orange,
+    Teal,
+    Red,
+    White,
+    Black,
+}
+
+impl PriceColor {
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "orange" => Some(Self::Orange),
+            "teal" => Some(Self::Teal),
+            "red" => Some(Self::Red),
+            "white" => Some(Self::White),
+            "black" => Some(Self::Black),
+            _ => None,
+        }
+    }
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Orange => "orange",
+            Self::Teal => "teal",
+            Self::Red => "red",
+            Self::White => "white",
+            Self::Black => "black",
+        }
+    }
+    fn color(self) -> Color {
+        match self {
+            Self::Orange => LAST_PRICE,
+            Self::Teal => Color(38, 166, 154),
+            Self::Red => Color(239, 83, 80),
+            Self::White => Color(220, 220, 220),
+            Self::Black => Color(0, 0, 0),
+        }
+    }
+    #[cfg(test)]
+    fn pixel(self) -> Rgba8Pixel {
+        self.color().pixel()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PricePattern {
+    #[default]
+    Dashed,
+    Solid,
+    Dotted,
+}
+impl PricePattern {
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "dashed" => Some(Self::Dashed),
+            "solid" => Some(Self::Solid),
+            "dotted" => Some(Self::Dotted),
+            _ => None,
+        }
+    }
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Dashed => "dashed",
+            Self::Solid => "solid",
+            Self::Dotted => "dotted",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PriceBorder {
+    #[default]
+    White,
+    Color,
+    None,
+}
+
+impl PriceBorder {
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "white" => Some(Self::White),
+            "color" => Some(Self::Color),
+            "none" => Some(Self::None),
+            _ => None,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::White => "white",
+            Self::Color => "color",
+            Self::None => "none",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct PriceStyle {
+    pub color: PriceColor,
+    pub pattern: PricePattern,
+    pub visible: bool,
+    pub border: PriceBorder,
+    pub grid_visible: bool,
+    pub labels_visible: bool,
+    pub thickness: u8,
+    pub glow_color: PriceColor,
+    pub glow_intensity: u8,
+    pub shadow_color: PriceColor,
+    pub shadow_intensity: u8,
+}
+
+impl Default for PriceStyle {
+    fn default() -> Self {
+        Self {
+            color: PriceColor::Orange,
+            pattern: PricePattern::Dashed,
+            visible: true,
+            border: PriceBorder::White,
+            grid_visible: true,
+            labels_visible: true,
+            thickness: 1,
+            glow_color: PriceColor::Orange,
+            glow_intensity: 0,
+            shadow_color: PriceColor::Black,
+            shadow_intensity: 0,
+        }
+    }
+}
 const UP: Color = Color(38, 166, 154);
 const DOWN: Color = Color(239, 83, 80);
 
@@ -156,6 +290,18 @@ impl<'a> Canvas<'a> {
         if x >= 0 && y >= 0 && (x as usize) < self.width && (y as usize) < self.height {
             self.pixels[y as usize * self.width + x as usize] = color.pixel();
         }
+    }
+
+    fn blend(&mut self, x: i32, y: i32, color: Color, alpha: f32) {
+        if x < 0 || y < 0 || x as usize >= self.width || y as usize >= self.height {
+            return;
+        }
+        let pixel = &mut self.pixels[y as usize * self.width + x as usize];
+        let mix =
+            |old: u8, new: u8| (old as f32 * (1.0 - alpha) + new as f32 * alpha).round() as u8;
+        pixel.r = mix(pixel.r, color.0);
+        pixel.g = mix(pixel.g, color.1);
+        pixel.b = mix(pixel.b, color.2);
     }
 
     fn hline(&mut self, x0: i32, x1: i32, y: i32, color: Color) {
@@ -333,12 +479,14 @@ impl<'a> Canvas<'a> {
 }
 
 /// Chart data, view state, and a Slint-compatible software raster output.
+#[derive(Clone)]
 pub struct Chart {
-    bars: Vec<Bar>,
+    bars: std::sync::Arc<Vec<Bar>>,
     start: f64,
     end: f64,
     width: u32,
     height: u32,
+    price_style: PriceStyle,
 }
 
 impl Chart {
@@ -346,11 +494,12 @@ impl Chart {
     pub fn new(bars: Vec<Bar>) -> Self {
         let end = bars.len() as f64;
         Self {
-            bars,
+            bars: std::sync::Arc::new(bars),
             start: 0.0,
             end,
             width: 0,
             height: 0,
+            price_style: PriceStyle::default(),
         }
     }
 
@@ -364,7 +513,15 @@ impl Chart {
         (self.width.max(1), self.height.max(1))
     }
 
-    /// The newest bar's close, positioned in the current visible price range.
+    pub fn price_style(&self) -> PriceStyle {
+        self.price_style
+    }
+
+    pub fn set_price_style(&mut self, style: PriceStyle) {
+        self.price_style = style;
+    }
+
+    /// The newest close in normalized plot coordinates, including off-screen prices.
     pub fn current_price_marker(&self) -> Option<AxisTick> {
         if self.width == 0 {
             return None;
@@ -375,11 +532,12 @@ impl Chart {
         }
         let (_, _, transform) = self.view_transform(self.width, self.height)?;
         let y = transform.price_to_y(close);
-        if !(0.0..transform.height).contains(&y) {
+        let position = (y / transform.height) as f32;
+        if !position.is_finite() {
             return None;
         }
         Some(AxisTick {
-            position: (y / transform.height) as f32,
+            position,
             label: format!("{close:.2}"),
         })
     }
@@ -583,9 +741,11 @@ impl Chart {
             return frame;
         };
 
-        for tick in self.axis_ticks(scale).1 {
-            let y = (height as f32 * tick.position).round() as i32;
-            canvas.hline(0, width as i32 - 1, y, GRID);
+        if self.price_style.grid_visible {
+            for tick in self.axis_ticks(scale).1 {
+                let y = (height as f32 * tick.position).round() as i32;
+                canvas.hline(0, width as i32 - 1, y, GRID);
+            }
         }
 
         let bars_per_pixel = (self.end - self.start) / width as f64;
@@ -609,17 +769,67 @@ impl Chart {
                 self.draw_candle(&mut canvas, transform, center, candle_width, candle);
             }
         }
-        if let Some(marker) = self.current_price_marker() {
+        if let Some(marker) = self
+            .current_price_marker()
+            .filter(|marker| self.price_style.visible && (0.0..1.0).contains(&marker.position))
+        {
             let y = (height as f32 * marker.position).round() as i32;
             let scale = if scale.is_finite() && scale > 0.0 {
                 scale
             } else {
                 1.0
             };
-            let dash = (4.0 * scale).round().max(1.0) as usize;
-            let gap = (3.0 * scale).round().max(1.0) as usize;
+            let (dash, gap) = match self.price_style.pattern {
+                PricePattern::Solid => (width as usize, 1),
+                PricePattern::Dashed => (
+                    (4.0 * scale).round().max(1.0) as usize,
+                    (3.0 * scale).round().max(1.0) as usize,
+                ),
+                PricePattern::Dotted => (
+                    (1.0 * scale).round().max(1.0) as usize,
+                    (3.0 * scale).round().max(1.0) as usize,
+                ),
+            };
+            let thickness = ((self.price_style.thickness as f32 * scale).round() as i32).max(1);
+            let radius = (3.0 * scale).round().max(1.0) as i32;
+            let shadow_offset = (2.0 * scale).round().max(1.0) as i32;
+            if self.price_style.glow_intensity > 0 || self.price_style.shadow_intensity > 0 {
+                for x in 0..width as usize {
+                    if x % (dash + gap) >= dash {
+                        continue;
+                    }
+                    for (intensity, offset, color) in [
+                        (
+                            self.price_style.glow_intensity,
+                            0,
+                            self.price_style.glow_color.color(),
+                        ),
+                        (
+                            self.price_style.shadow_intensity,
+                            shadow_offset,
+                            self.price_style.shadow_color.color(),
+                        ),
+                    ] {
+                        if intensity == 0 {
+                            continue;
+                        }
+                        for dy in -radius..=radius {
+                            let alpha = (intensity as f32 * 0.12)
+                                * (1.0 - dy.abs() as f32 / (radius + 1) as f32);
+                            canvas.blend(x as i32, y + offset + dy, color, alpha);
+                        }
+                    }
+                }
+            }
             for x in (0..width as usize).step_by(dash + gap) {
-                canvas.hline(x as i32, (x + dash - 1) as i32, y, LAST_PRICE);
+                for dy in 0..thickness {
+                    canvas.hline(
+                        x as i32,
+                        (x + dash - 1) as i32,
+                        y + dy - (thickness - 1) / 2,
+                        self.price_style.color.color(),
+                    );
+                }
             }
         }
         drop(canvas);
@@ -876,7 +1086,10 @@ mod tests {
         assert_eq!(row[4], BACKGROUND.pixel());
         assert_eq!(row[7], Color(230, 138, 0).pixel());
 
-        chart.bars.last_mut().unwrap().close = 12.34;
+        std::sync::Arc::make_mut(&mut chart.bars)
+            .last_mut()
+            .unwrap()
+            .close = 12.34;
         let updated = chart.current_price_marker().unwrap();
         assert_eq!(updated.label, "12.34");
         assert!(updated.position < marker.position);
@@ -888,11 +1101,137 @@ mod tests {
             .abs()
                 < 0.0001
         );
-        chart.bars.last_mut().unwrap().close = 100.0;
-        assert!(chart.current_price_marker().is_none());
-        chart.bars.last_mut().unwrap().close = f64::NAN;
+        std::sync::Arc::make_mut(&mut chart.bars)
+            .last_mut()
+            .unwrap()
+            .close = 100.0;
+        let above = chart.current_price_marker().unwrap();
+        assert_eq!(above.label, "100.00");
+        assert!(above.position < 0.0);
+        assert!(!chart
+            .render_frame(1.0)
+            .as_slice()
+            .contains(&LAST_PRICE.pixel()));
+        std::sync::Arc::make_mut(&mut chart.bars)
+            .last_mut()
+            .unwrap()
+            .close = 1.0;
+        let below = chart.current_price_marker().unwrap();
+        assert_eq!(below.label, "1.00");
+        assert!(below.position > 1.0);
+        assert!(!chart
+            .render_frame(1.0)
+            .as_slice()
+            .contains(&LAST_PRICE.pixel()));
+        std::sync::Arc::make_mut(&mut chart.bars)
+            .last_mut()
+            .unwrap()
+            .close = f64::NAN;
         assert!(chart.current_price_marker().is_none());
         assert!(Chart::new(Vec::new()).current_price_marker().is_none());
+    }
+
+    #[test]
+    fn price_line_style_changes_color_and_pattern_without_affecting_other_charts() {
+        let bars = vec![bar(1, 10.0, 15.0, 5.0, 11.25)];
+        let mut chart = Chart::new(bars.clone());
+        let mut other = Chart::new(bars);
+        chart.resize(240, 101);
+        other.resize(240, 101);
+        chart.set_price_style(PriceStyle {
+            color: PriceColor::Teal,
+            pattern: PricePattern::Solid,
+            ..PriceStyle::default()
+        });
+        let y = (chart.current_price_marker().unwrap().position * 101.0).round() as usize;
+        let frame = chart.render_frame(1.0);
+        assert!(frame.as_slice()[y * 240..(y + 1) * 240]
+            .iter()
+            .all(|p| *p == PriceColor::Teal.pixel()));
+        assert_eq!(other.price_style(), PriceStyle::default());
+        assert_ne!(other.render_frame(1.0).as_slice(), frame.as_slice());
+    }
+
+    #[test]
+    fn price_visibility_thickness_effects_and_grid_change_pixels() {
+        let mut chart = Chart::new(vec![bar(1, 10.0, 15.0, 5.0, 11.25)]);
+        chart.resize(240, 101);
+        let y = (chart.current_price_marker().unwrap().position * 101.0).round() as usize;
+        let style = PriceStyle {
+            pattern: PricePattern::Solid,
+            grid_visible: false,
+            ..PriceStyle::default()
+        };
+        chart.set_price_style(style);
+        let baseline = chart.render_frame(1.0);
+        assert_eq!(baseline.as_slice()[y * 240], LAST_PRICE.pixel());
+        chart.set_price_style(PriceStyle {
+            visible: false,
+            ..style
+        });
+        assert_ne!(
+            chart.render_frame(1.0).as_slice()[y * 240],
+            LAST_PRICE.pixel()
+        );
+        chart.set_price_style(PriceStyle {
+            thickness: 3,
+            ..style
+        });
+        let thick = chart.render_frame(1.0);
+        assert_eq!(thick.as_slice()[(y - 1) * 240], LAST_PRICE.pixel());
+        assert_eq!(thick.as_slice()[(y + 1) * 240], LAST_PRICE.pixel());
+        chart.set_price_style(PriceStyle {
+            glow_color: PriceColor::Teal,
+            glow_intensity: 2,
+            shadow_color: PriceColor::Red,
+            shadow_intensity: 2,
+            ..style
+        });
+        let effects = chart.render_frame(1.0);
+        assert_ne!(
+            effects.as_slice()[(y - 2) * 240],
+            baseline.as_slice()[(y - 2) * 240]
+        );
+        assert_ne!(
+            effects.as_slice()[(y + 4) * 240],
+            baseline.as_slice()[(y + 4) * 240]
+        );
+        chart.set_price_style(PriceStyle {
+            visible: false,
+            grid_visible: true,
+            ..style
+        });
+        let with_grid = chart.render_frame(1.0);
+        chart.set_price_style(PriceStyle {
+            visible: false,
+            grid_visible: false,
+            ..style
+        });
+        let without_grid = chart.render_frame(1.0);
+        assert_ne!(with_grid.as_slice(), without_grid.as_slice());
+    }
+
+    #[test]
+    fn marker_remains_available_after_pan_and_zoom_move_price_out_of_view() {
+        let bars = (0..100)
+            .map(|i| {
+                let price = if i < 50 { 10.0 } else { 30.0 };
+                bar(i, price, price + 1.0, price - 1.0, price)
+            })
+            .collect();
+        let mut chart = Chart::new(bars);
+        chart.resize(400, 200);
+        chart.zoom_at(0.0, 1000.0);
+        let zoom_marker = chart.current_price_marker().unwrap();
+        assert_eq!(zoom_marker.label, "30.00");
+        assert!(zoom_marker.position < 0.0);
+        chart.zoom_at(200.0, -1000.0);
+        assert!((0.0..1.0).contains(&chart.current_price_marker().unwrap().position));
+        chart.zoom_at(400.0, 1000.0);
+        chart.pan_px(10_000.0);
+        let pan_marker = chart.current_price_marker().unwrap();
+        assert_eq!(pan_marker.label, "30.00");
+        assert!(pan_marker.position < 0.0);
     }
 
     #[test]

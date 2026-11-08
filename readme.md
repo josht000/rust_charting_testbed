@@ -42,11 +42,16 @@ Each config will be test with 8 different charts, each with 6 different indicato
     - WebAssembly for browser deployment.
     - Native executable for desktop.
 
+## 4. DigiTrader + Slint + Rust
+    - Port the existing DigiTrader feature set to a shared Slint/Rust desktop and web app.
+    - Keep chart data, drawings, indicators, and broker boundaries renderer-independent.
+    - Use static fixtures and simulated order previews until live integrations are explicitly implemented.
+
 ## Running
 
 - Tauri: `cd 1_tauri && npm run serve:web` → http://localhost:5171 (`?bench=1` to bench); desktop via `src-tauri/target/release/app.exe --bench`.
 - egui: `cd 2_egui && trunk serve --port 5172 --release` → http://localhost:5172 (`?bench=1`); native `cargo run --release -- --bench`.
 - Slint: `cd 3_slint && ./target/release/serve.exe` → http://localhost:5173 (`?bench=1`); native `slint-desktop.exe --bench`.
+- DigiTrader port: `cd 4_digitrader`; `cargo run --release --bin digitrader-desktop` (desktop) or `.\build-web.ps1` (WebAssembly).
 - Stream rate: `?rate=N` (web) / `--rate=N` (native), bars/sec, default 1000.
 - Results land in `results/`; see `results/COMPARISON.md` for the cross-config comparison.
-

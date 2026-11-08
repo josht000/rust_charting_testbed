@@ -7,6 +7,7 @@ pub mod drawings;
 pub mod hotkeys;
 pub mod indicators;
 pub mod model;
+mod settings;
 pub mod styles;
 #[cfg(target_family = "wasm")]
 mod web_popout;

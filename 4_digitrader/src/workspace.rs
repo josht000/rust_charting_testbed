@@ -35,6 +35,26 @@ impl Default for Workspace {
 }
 
 impl Workspace {
+    pub(crate) fn from_saved(charts: &[crate::settings::SavedChart]) -> Self {
+        let entries = charts
+            .iter()
+            .enumerate()
+            .map(|(index, chart)| ChartEntry {
+                id: index as u32 + 1,
+                symbol: chart.symbol.clone(),
+                linked: chart.linked,
+            })
+            .collect::<Vec<_>>();
+        let mut workspace = Self {
+            next_id: entries.len() as u32 + 1,
+            charts: entries,
+            active: 1,
+            row_heights: Vec::new(),
+            column_splits: [0.5; 4],
+        };
+        workspace.reset_grid();
+        workspace
+    }
     pub fn charts(&self) -> &[ChartEntry] {
         &self.charts
     }

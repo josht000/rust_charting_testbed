@@ -2,7 +2,7 @@ use digitrader::{app::create_app, AppWindow};
 use i_slint_backend_testing::{
     mock_elapsed_time, ElementHandle, TestingBackend, TestingBackendOptions,
 };
-use slint::platform::PointerEventButton;
+use slint::platform::{PointerEventButton, WindowEvent};
 use slint::{ComponentHandle, LogicalPosition, LogicalSize, Model};
 use std::time::Duration;
 
@@ -98,6 +98,107 @@ fn selected_chart_outline_remains_visible_on_all_edges() {
             .any(|p| p.r > 150 && p.g > 70 && p.b < 30),
         "price line must align with tag"
     );
+    tag.mock_single_click(PointerEventButton::Right);
+    mock_elapsed_time(Duration::from_millis(1));
+    let teal = ElementHandle::find_by_element_id(&ui, "ChartAxes::style_color")
+        .nth(1)
+        .expect("price style teal control");
+    teal.mock_single_click(PointerEventButton::Left);
+    mock_elapsed_time(Duration::from_millis(1));
+    assert_eq!(ui.get_charts().row_data(0).unwrap().price_color, "teal");
+    let solid = ElementHandle::find_by_element_id(&ui, "ChartAxes::style_pattern")
+        .nth(1)
+        .expect("price style solid control");
+    solid.mock_single_click(PointerEventButton::Left);
+    mock_elapsed_time(Duration::from_millis(1));
+    assert_eq!(ui.get_charts().row_data(0).unwrap().price_pattern, "solid");
+    let visibility = ElementHandle::find_by_element_id(&ui, "ChartAxes::style_visibility")
+        .next()
+        .unwrap();
+    visibility.mock_single_click(PointerEventButton::Left);
+    mock_elapsed_time(Duration::from_millis(1));
+    assert!(!ui.get_charts().row_data(0).unwrap().price_options.visible);
+    click(&ui, "chart_select_button", 0);
+    let axis_touch = ElementHandle::find_by_element_id(&ui, "ChartAxes::axis_touch")
+        .next()
+        .unwrap();
+    axis_touch.mock_single_click(PointerEventButton::Right);
+    mock_elapsed_time(Duration::from_millis(1));
+    let visibility = ElementHandle::find_by_element_id(&ui, "ChartAxes::style_visibility")
+        .next()
+        .unwrap();
+    visibility.mock_single_click(PointerEventButton::Left);
+    mock_elapsed_time(Duration::from_millis(1));
+    assert!(ui.get_charts().row_data(0).unwrap().price_options.visible);
+    ui.invoke_price_option_changed(1, "thickness".into(), "3".into());
+    ui.invoke_price_option_changed(1, "glow".into(), "2".into());
+    ui.invoke_price_option_changed(1, "shadow_color".into(), "red".into());
+    let options = ui.get_charts().row_data(0).unwrap().price_options;
+    assert_eq!(options.thickness, 3);
+    assert_eq!(options.glow, 2);
+    assert_eq!(options.shadow_color, "red");
+    click(&ui, "chart_select_button", 0);
+    let position = LogicalPosition::new(
+        plot_position.x + 40.0,
+        plot_position.y + plot_size.height * marker.position,
+    );
+    ui.window()
+        .dispatch_event(WindowEvent::PointerMoved { position });
+    ui.window().dispatch_event(WindowEvent::PointerPressed {
+        position,
+        button: PointerEventButton::Right,
+    });
+    ui.window().dispatch_event(WindowEvent::PointerReleased {
+        position,
+        button: PointerEventButton::Right,
+    });
+    mock_elapsed_time(Duration::from_millis(1));
+    let red = ElementHandle::find_by_element_id(&ui, "ChartAxes::style_color")
+        .nth(2)
+        .expect("price style red control");
+    red.mock_single_click(PointerEventButton::Left);
+    mock_elapsed_time(Duration::from_millis(1));
+    assert_eq!(ui.get_charts().row_data(0).unwrap().price_color, "red");
+    let teal = ElementHandle::find_by_element_id(&ui, "ChartAxes::style_color")
+        .nth(1)
+        .unwrap();
+    teal.mock_single_click(PointerEventButton::Left);
+    mock_elapsed_time(Duration::from_millis(1));
+    click(&ui, "chart_select_button", 0);
+    ui.invoke_chart_zoomed(3000.0, 0.0);
+    mock_elapsed_time(Duration::from_millis(1));
+    let offscreen = ui.get_charts().row_data(0).unwrap().current_price;
+    assert_eq!(offscreen.label, marker.label);
+    assert!(
+        offscreen.position < 0.0 || offscreen.position >= 1.0,
+        "zoom should put the latest price off-screen"
+    );
+    let tag = ElementHandle::find_by_element_id(&ui, "ChartAxes::current_price_tag")
+        .next()
+        .unwrap();
+    let tag_position = tag.absolute_position();
+    let axis = ElementHandle::find_by_element_id(&ui, "ChartAxes::axis_price")
+        .next()
+        .unwrap();
+    let axis_position = axis.absolute_position();
+    let axis_size = axis.size();
+    if offscreen.position < 0.0 {
+        assert!((tag_position.y - axis_position.y).abs() < 1.0);
+    } else {
+        assert!(
+            (tag_position.y + tag.size().height - axis_position.y - axis_size.height).abs() < 1.0
+        );
+    }
+    let snapshot = ui.window().take_snapshot().unwrap();
+    let x = (tag_position.x + 12.0) as usize;
+    let y = (tag_position.y + 2.0) as usize;
+    let pixel = snapshot.as_slice()[y * snapshot.width() as usize + x];
+    assert!(
+        pixel.r < 80 && pixel.g > 120 && pixel.b > 100,
+        "off-screen tag must be visible"
+    );
+    ui.invoke_chart_zoomed(-10_000.0, 0.0);
+    mock_elapsed_time(Duration::from_millis(1));
     for (name, horizontal) in [("axis_price", false), ("axis_time", true)] {
         let axis = ElementHandle::find_by_element_id(&ui, &format!("ChartAxes::{name}"))
             .next()

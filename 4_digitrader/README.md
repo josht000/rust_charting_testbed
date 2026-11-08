@@ -50,9 +50,23 @@ Price levels and UTC time intervals move with the data as the chart is panned;
 their spacing adjusts when zooming or resizing. Price grid lines follow the
 same levels as the price labels.
 An orange dashed line and right-axis tag show the newest sample bar's close,
-not the separate fixture quote. They follow the chart's price scale and are
-hidden when that price is outside the visible range; compact pop-outs share
-the same marker. Live market updates are not yet connected.
+not the separate fixture quote. They follow the chart's price scale. When the
+latest close is above or below the visible range, its tag stays at the
+corresponding axis edge with an arrow; the dashed line is hidden until its
+actual price is visible again. Compact pop-outs share the same marker.
+Live market updates are not yet connected.
+Right-click the price axis, current-price line, or its tag to configure the
+indicator and Y axis. The scrollable editor offers visibility, line color,
+pattern and thickness, tag border, glow and shadow colors and intensities,
+and price labels and horizontal grid visibility. Effects apply to the line.
+Settings belong to each chart. A pop-out initially copies its source's settings,
+then can be configured independently.
+Grid chart symbols, link state and these settings are restored on restart;
+grid sizing and detached pop-outs are not restored. Desktop settings are in
+`%LOCALAPPDATA%\DigiTrader\chart-settings.json` (or the user configuration
+directory on other platforms); browser settings use local storage for the
+current origin. Storage errors appear in the status bar; invalid settings are
+not overwritten automatically.
 
 Use **+ CHART** to add up to eight charts to the workspace grid. The first
 two charts share a row, the third starts a second row, and the fourth fills
@@ -69,12 +83,16 @@ independent. Joining the linked group adopts its current symbol. Drawings
 remain shared by symbol even when charts are unlinked. The trade panel scrolls
 independently.
 
-**POP** opens a compact, read-only view in a separate native window or browser
-pop-up. It stays in sync with the chart's symbol, viewport, and drawings
-while the workspace is open. Closing the chart's grid tile leaves an open
-pop-out running independently; close the pop-out itself when finished. Linked
-symbols and same-symbol drawings continue to update it. At least one chart
-must remain in the grid. Browser pop-ups must be allowed.
+**POP** creates a new, independent chart in a separate native window or browser
+pop-up, initially copying the source's symbol, viewport and style but starting
+in **SOLO**. Edit its symbol, use **LINK** to join the symbol link group, and
+select drawing tools from its toolbar. Drag to pan with the cursor, or scroll
+over the plot to zoom around the pointer. Viewport and style changes do not
+affect the source chart; drawings remain shared across charts with the same
+symbol. Closing the source grid tile leaves the pop-out open. Pop-outs and
+their independent settings are currently session-only and are not restored on
+restart. At least one chart must remain in the grid. Browser pop-ups must be
+allowed.
 Native windows have custom minimize, maximize/restore, and close controls. Drag
 the title area to move them and drag their edges or corners to resize. In the
 browser, the browser and operating system own window chrome, movement,
