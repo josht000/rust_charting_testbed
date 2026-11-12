@@ -1,17 +1,21 @@
 //! Slint + Rust trading testbed (config 3).
 //!
 //! 8 candlestick charts x 23,400 1-second bars, 6 indicators each.
-//! Charts are software-rasterized in Rust into `slint::SharedPixelBuffer`
-//! images (see `chart.rs` / `raster.rs`); the `.slint` UI is a 4x2 grid of
-//! `Image` panels that forwards pan/zoom events back to Rust.
+//!
+//! Render paths:
+//! - pixels (default): software-rasterized into `slint::SharedPixelBuffer`
+//! - wgpu: GPU chart textures composited by Slint
+//! - wgpu-transform: experimental GPU view transforms and chart textures
+//! - paths: Slint path layers
 
 slint::include_modules!();
 
 pub mod app;
 pub mod bench;
 pub mod chart;
-#[cfg(not(target_family = "wasm"))]
+pub mod geom;
 pub mod gpu;
+mod gpu_transform;
 pub mod plat;
 pub mod raster;
 

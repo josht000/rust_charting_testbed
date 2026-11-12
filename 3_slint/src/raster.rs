@@ -3,7 +3,7 @@
 
 use slint::Rgba8Pixel;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Rgb(pub u8, pub u8, pub u8);
 
 impl Rgb {
@@ -11,7 +11,6 @@ impl Rgb {
         Rgba8Pixel { r: self.0, g: self.1, b: self.2, a: 255 }
     }
 }
-
 pub const BG: Rgb = Rgb(15, 17, 21);
 pub const GRID: Rgb = Rgb(34, 38, 46);
 pub const UP: Rgb = Rgb(38, 166, 154);
@@ -161,5 +160,51 @@ impl<'a> Canvas<'a> {
             x += sx;
             y += sy;
         }
+    }
+}
+
+/// Render a list of primitives into a canvas.
+/// Interprets geometry commands (rects, lines, etc.) into pixel operations.
+pub fn render_primitives(canvas: &mut Canvas, prims: &[crate::geom::Prim]) {
+    for prim in prims {
+        match prim {
+            crate::geom::Prim::Rect { x0, y0, x1, y1, col, alpha } => {
+                let (x0, y0, x1, y1) = (x0.round() as i32, y0.round() as i32, x1.round() as i32, y1.round() as i32);
+                if *alpha == 255 {
+                    canvas.fill_rect(x0, y0, x1, y1, *col);
+                } else {
+                    canvas.fill_rect_alpha(x0, y0, x1, y1, *col, *alpha);
+                }
+
+            }
+            crate::geom::Prim::Seg { x0, y0, x1, y1, col } => {
+                canvas.line(*x0, *y0, *x1, *y1, *col);
+            }
+            crate::geom::Prim::HLine { x0, x1, y, col } => {
+                canvas.hline(x0.round() as i32, x1.round() as i32, *y, *col);
+            }
+            crate::geom::Prim::VLine { x, y0, y1, col } => {
+                canvas.vline(*x, *y0, *y1, *col);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod primitive_tests {
+    use super::*;
+    use crate::geom::Prim;
+
+    #[test]
+    fn translucent_rectangle_blends_over_existing_pixels() {
+        let mut pixels = [Rgba8Pixel { r: 0, g: 0, b: 0, a: 255 }; 2];
+        let mut canvas = Canvas::new(&mut pixels, 2, 1);
+        canvas.fill(Rgb(100, 50, 20));
+        render_primitives(&mut canvas, &[
+            Prim::Rect { x0: 0.0, y0: 0.0, x1: 1.0, y1: 1.0, col: PROFILE, alpha: 128 },
+            Prim::Rect { x0: 1.0, y0: 0.0, x1: 2.0, y1: 1.0, col: UP, alpha: 255 },
+        ]);
+        assert_eq!((pixels[0].r, pixels[0].g, pixels[0].b, pixels[0].a), (64, 93, 124, 255));
+        assert_eq!((pixels[1].r, pixels[1].g, pixels[1].b, pixels[1].a), (UP.0, UP.1, UP.2, 255));
     }
 }

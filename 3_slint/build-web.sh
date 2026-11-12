@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the wasm bundle (winit + femtovg/WebGL backend only) into ./pkg
+# Build the wasm bundle (winit + femtovg and wgpu backends) into ./pkg
 # and write sizes.json consumed by the web benchmark.
 set -euo pipefail
 cd "$(dirname "$0")"

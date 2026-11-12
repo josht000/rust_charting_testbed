@@ -1,8 +1,12 @@
 # NOTES — slint config
 
+For the native GPU prototype, femtovg 0.28 experiment, and remaining web/GPU
+work, see [GPU.md](GPU.md). The CPU rendering description below remains the
+default path.
+
 ## Rendering approach
 
-Slint has no canvas/immediate-mode widget, so each chart is software-rasterized
+In the default CPU path, each chart is software-rasterized
 in Rust directly into a `slint::SharedPixelBuffer<Rgba8Pixel>` (hand-rolled
 rasterizer in `src/raster.rs`, ~140 lines — no tiny-skia needed) and displayed
 in a plain `Image` element (`image-fit: fill`).
@@ -85,8 +89,10 @@ feature gap vs. config 1 (Dockview) / config 2 (egui_dock).
 ## Web notes / caveats
 
 - Built with `wasm-pack build --release --target web --no-default-features
-  --features slint/backend-winit,slint/renderer-femtovg` — winit backend +
-  FemtoVG over WebGL. Slint embeds the Inter font, so text works offline.
+  --features slint/backend-winit,slint/renderer-femtovg`. The wasm target
+  also enables Slint's wgpu renderer. The default CPU chart path uses
+  FemtoVG over WebGL; `?render=wgpu` uses GPU chart textures. Slint embeds
+  the Inter font, so text works offline.
 - Requires a `<canvas id="canvas">` element (Slint convention); canvas fills
   the window and Slint observes its size.
 - rand 0.8 needs `getrandom/js` on `wasm32-unknown-unknown` (in Cargo.toml).

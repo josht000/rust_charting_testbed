@@ -1,0 +1,59 @@
+{
+  "artifact_size_mb": {
+    "exe": 17.43408203125,
+    "js_bundle": 0.0,
+    "total_web_dist": 0.0,
+    "wasm": 0.0
+  },
+  "bars_per_chart": 23400,
+  "charts": 8,
+  "config": "slint",
+  "environment": {
+    "browser": "n/a",
+    "cpu": "Intel64 Family 6 Model 158 Stepping 13, GenuineIntel",
+    "os": "windows",
+    "version": "slint 1.18.1, rustc 1.99.1 (58cf8f9c3 2026-10-13)"
+  },
+  "frame_time": {
+    "live_update_100hz_per_chart_10s": {
+      "avg_ms": 13.280940963855446,
+      "fps": 74.7,
+      "p95_ms": 14.199000000000524,
+      "p99_ms": 14.661000000000058
+    },
+    "live_update_1s_per_chart_10s": {
+      "avg_ms": 20.04382222222234,
+      "fps": 0.9,
+      "p95_ms": 22.498999999999796,
+      "p99_ms": 22.498999999999796
+    },
+    "pan_zoom_10s": {
+      "avg_ms": 7.557376747967465,
+      "fps": 61.5,
+      "p95_ms": 13.91740000000027,
+      "p99_ms": 15.374999999998181
+    },
+    "stream_catchup": {
+      "avg_ms": 20.475543005181354,
+      "fps": 18.97456122851023,
+      "p95_ms": 21.771200000000135,
+      "p99_ms": 22.712499999999636
+    }
+  },
+  "indicator_compute_ms": {
+    "all_charts_median": 2.9125499999991007,
+    "per_chart_median": 0.3239499999990585,
+    "runs": 20
+  },
+  "memory_mb": {
+    "after_30s": 226.98828125,
+    "idle_after_load": 206.3125,
+    "method": "GetProcessMemoryInfo WorkingSetSize"
+  },
+  "notes": "frame = UI action -> rendered frame latency; fps = rendered frames/s during the phase. Data generation excluded. Streaming replay: 4000 bars preload + 2000 bars/s in 50ms batches through the incremental indicator path. EMA/SMA via pure-Rust `ta` crate (TA-Lib-compatible SMA seed); VWAP+volume profile via shared/indicators. Charts software-rendered in Rust into SharedPixelBuffer.",
+  "startup_ms_to_first_chart": 156.4959,
+  "stream_catchup_ms": 10171.5132,
+  "stream_rate_bars_per_sec": 2000.0,
+  "target": "desktop",
+  "timestamp": "2026-11-12T04:07:10Z"
+}

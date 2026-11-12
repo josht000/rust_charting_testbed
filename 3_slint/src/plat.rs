@@ -185,11 +185,21 @@ fn browser_string() -> String {
 // ---------- emit result JSON ----------
 
 #[cfg(not(target_family = "wasm"))]
-pub fn emit_json(json_text: &str) {
-    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("results")
-        .join("slint-desktop.json");
+pub fn emit_json(json_text: &str, render_mode: &str, _gpu_backend: Option<&str>) {
+    let name = match render_mode {
+        "pixels" => "slint-desktop.json",
+        "paths" => "slint-desktop-paths.json",
+        "wgpu" => "slint-desktop-wgpu.json",
+        "wgpu-transform" => "slint-desktop-wgpu-transform.json",
+        other => panic!("unsupported chart renderer: {other}"),
+    };
+    let path = match std::env::var_os("SLINT_TB_BENCH_OUTPUT") {
+        Some(path) => std::path::PathBuf::from(path),
+        None => std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("results")
+            .join(name),
+    };
     match std::fs::write(&path, json_text) {
         Ok(()) => eprintln!("bench: wrote {}", path.display()),
         Err(e) => eprintln!("bench: failed to write {}: {}", path.display(), e),
@@ -198,16 +208,22 @@ pub fn emit_json(json_text: &str) {
 }
 
 #[cfg(target_family = "wasm")]
-pub fn emit_json(json_text: &str) {
+pub fn emit_json(json_text: &str, render_mode: &str, gpu_backend: Option<&str>) {
     use wasm_bindgen::JsValue;
     web_sys::console::log_1(&JsValue::from_str(json_text));
 
-    // Preferred: POST back to the dev server, which writes results/slint-web.json.
+    let name = match render_mode {
+        "pixels" => "slint-web.json".to_string(),
+        "wgpu" | "wgpu-transform" => format!("slint-web-{render_mode}-{}.json", gpu_backend.expect("wgpu adapter must be initialized").to_ascii_lowercase()),
+        "paths" => "slint-web-paths.json".to_string(),
+        other => panic!("unsupported chart renderer: {other}"),
+    };
+    // Preferred: POST back to the dev server.
     let init = web_sys::RequestInit::new();
     init.set_method("POST");
     init.set_body(&JsValue::from_str(json_text));
     if let Some(win) = web_sys::window() {
-        if let Ok(req) = web_sys::Request::new_with_str_and_init("/save?name=slint-web.json", &init) {
+        if let Ok(req) = web_sys::Request::new_with_str_and_init(&format!("/save?name={name}"), &init) {
             let _ = win.fetch_with_request(&req);
         }
 
@@ -223,7 +239,7 @@ pub fn emit_json(json_text: &str) {
                 if let Ok(url) = web_sys::Url::create_object_url_with_blob(&blob) {
                     if let Ok(a) = doc.create_element("a") {
                         let _ = a.set_attribute("href", &url);
-                        let _ = a.set_attribute("download", "slint-web.json");
+                        let _ = a.set_attribute("download", &name);
                         let _ = a.set_attribute("style", "display:none");
                         let _ = doc.body().map(|b| b.append_child(&a));
                         if let Some(el) = a.dyn_ref::<web_sys::HtmlElement>() {

@@ -2,7 +2,8 @@
 
 8 candlestick charts × 23,400 1-second bars, 6 indicators each, one window.
 Everything except the shell HTML is Rust — UI markup is `.slint`, all chart
-drawing is a hand-rolled software rasterizer in Rust.
+drawing defaults to a hand-rolled software rasterizer in Rust. An optional
+wgpu chart renderer is available on desktop and web.
 
 ## Stack
 
@@ -11,7 +12,8 @@ drawing is a hand-rolled software rasterizer in Rust.
 - **Indicators**: `ta` 0.5.0 (pure-Rust "rust talib") for EMA10/20/50 + SMA200;
   `shared/indicators` for daily-reset VWAP + 40-bin volume profile
 - **Data**: `shared/datagen` (`datagen::generate(chart, 1)`)
-- **Web**: `wasm32-unknown-unknown` via wasm-pack, Slint winit+FemtoVG (WebGL)
+- **Web**: `wasm32-unknown-unknown` via wasm-pack, Slint winit+FemtoVG;
+  CPU charts or wgpu charts using WebGPU or WebGL
 
 ## Layout
 
@@ -57,7 +59,13 @@ cargo run --release --bin slint-desktop -- --bench            # scripted bench -
 #          http://localhost:5173/?rate=3000      interactive, faster stream
 #          http://localhost:5173/?bench=1        scripted bench -> POSTs results/slint-web.json
 #                                                (also logs JSON + triggers a download)
+#          http://localhost:5173/?render=wgpu&gpu=webgpu  GPU charts via WebGPU
+#          http://localhost:5173/?render=wgpu&gpu=webgl   GPU charts via WebGL
+#          http://localhost:5173/?render=wgpu-transform&gpu=webgpu  GPU view transforms
 ```
+
+For renderer selection, benchmarks, current limitations, and the femtovg
+experiment, see [GPU.md](GPU.md).
 
 Any static file server works instead of `serve` (`npx serve -l 5173 .`,
 `python -m http.server 5173`), but only `serve` persists the bench JSON via

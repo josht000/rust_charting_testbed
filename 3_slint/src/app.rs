@@ -23,10 +23,11 @@ pub struct App {
     pub frame_cache: RefCell<Vec<Option<crate::chart::Frame>>>,
     mode: RenderMode,
     /// wgpu render mode: shared device/queue pipeline + per-chart textures.
-    #[cfg(not(target_family = "wasm"))]
     gpu: RefCell<Option<crate::gpu::Gpu>>,
-    #[cfg(not(target_family = "wasm"))]
     chart_gpu: RefCell<Vec<Option<crate::gpu::ChartGpu>>>,
+    transform_gpu: RefCell<Option<crate::gpu_transform::Gpu>>,
+    chart_transform_gpu: RefCell<Vec<Option<crate::gpu_transform::ChartGpu>>>,
+    updates_started: Cell<bool>,
 }
 
 fn set_chart_image(ui: &AppWindow, idx: usize, img: slint::Image) {
@@ -60,34 +61,68 @@ fn set_chart_layers(ui: &AppWindow, idx: usize, layers: Vec<crate::ChartLayer>) 
 
 /// Chart presentation path: pixel-buffer images (default), emitted Path
 /// geometry (`SLINT_TB_RENDER=paths` / `&render=paths`), or wgpu-rendered
-/// chart textures (`SLINT_TB_RENDER=wgpu`, native only).
+/// chart textures (`SLINT_TB_RENDER=wgpu` / `?render=wgpu`).
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum RenderMode {
     Pixels,
     Paths,
     Wgpu,
+    WgpuTransform,
+}
+
+impl RenderMode {
+    fn uses_wgpu(self) -> bool {
+        matches!(self, Self::Wgpu | Self::WgpuTransform)
+    }
 }
 
 #[cfg(not(target_family = "wasm"))]
 fn render_mode() -> RenderMode {
-    match std::env::var("SLINT_TB_RENDER").as_deref() {
-        Ok("paths") => RenderMode::Paths,
-        Ok("wgpu") => RenderMode::Wgpu,
-        _ => RenderMode::Pixels,
+    match std::env::var("SLINT_TB_RENDER") {
+        Err(std::env::VarError::NotPresent) => RenderMode::Pixels,
+        Err(e) => panic!("invalid SLINT_TB_RENDER: {e}"),
+        Ok(value) => parse_render_mode(Some(&value))
+            .unwrap_or_else(|| panic!("unsupported chart renderer: {value}")),
     }
 }
 
 #[cfg(target_family = "wasm")]
 fn render_mode() -> RenderMode {
-    let q = web_sys::window().and_then(|w| w.location().search().ok()).unwrap_or_default();
-    if q.contains("render=paths") {
-        RenderMode::Paths
-    } else {
-        RenderMode::Pixels
+    let query = web_sys::window().expect("browser window").location().search().expect("URL query");
+    let params = web_sys::UrlSearchParams::new_with_str(&query).expect("valid URL query");
+    let value = params.get("render");
+    parse_render_mode(value.as_deref())
+        .unwrap_or_else(|| panic!("unsupported chart renderer: {}", value.unwrap_or_default()))
+}
+
+fn parse_render_mode(value: Option<&str>) -> Option<RenderMode> {
+    match value {
+        None | Some("pixels") => Some(RenderMode::Pixels),
+        Some("paths") => Some(RenderMode::Paths),
+        Some("wgpu") => Some(RenderMode::Wgpu),
+        Some("wgpu-transform") => Some(RenderMode::WgpuTransform),
+        _ => None,
     }
 }
 
 impl App {
+    pub fn render_mode_name(&self) -> &'static str {
+        match self.mode {
+            RenderMode::Pixels => "pixels",
+            RenderMode::Paths => "paths",
+            RenderMode::Wgpu => "wgpu",
+            RenderMode::WgpuTransform => "wgpu-transform",
+        }
+    }
+
+    pub fn gpu_backend_name(&self) -> Option<String> {
+        self.gpu.borrow().as_ref().map(|gpu| format!("{:?}", gpu.device.adapter_info().backend))
+    }
+
+    pub fn gpu_adapter_name(&self) -> Option<String> {
+        self.gpu.borrow().as_ref().map(|gpu| gpu.device.adapter_info().name)
+    }
+
     /// Software-render chart `idx` and push the image into the UI.
     /// Re-renders incrementally (pan blit) when possible.
     pub fn render_chart(&self, idx: usize) {
@@ -97,8 +132,7 @@ impl App {
                 let layers = self.charts.borrow()[idx].layers();
                 set_chart_layers(&ui, idx, layers);
             }
-            #[cfg(not(target_family = "wasm"))]
-            RenderMode::Wgpu => self.render_chart_gpu(&ui, idx),
+            RenderMode::Wgpu | RenderMode::WgpuTransform => self.render_chart_gpu(&ui, idx),
             _ => {
                 let prev = self.frame_cache.borrow_mut()[idx].take();
                 let out = self.charts.borrow()[idx].render_frame(prev.as_ref());
@@ -116,19 +150,35 @@ impl App {
         }
     }
 
-    /// wgpu mode: draw chart `idx` into its texture; (re)bind the imported
-    /// image only when the texture handle changed (first frame / resize).
-    #[cfg(not(target_family = "wasm"))]
+    /// wgpu mode: draw chart `idx` into its texture via geometry primitives;
+    /// (re)bind the imported image only when the texture handle changed (first frame / resize).
     fn render_chart_gpu(&self, ui: &AppWindow, idx: usize) {
         let guard = self.gpu.borrow();
         let Some(g) = guard.as_ref() else { return }; // device not captured yet
-        let mut slots = self.chart_gpu.borrow_mut();
         let charts = self.charts.borrow();
-        let prev_img = slots[idx].as_ref().map(|s| s.img.clone());
-        g.render_chart(&mut slots[idx], &charts[idx]);
-        let img = slots[idx].as_ref().unwrap().img.clone();
-        if prev_img != Some(img.clone()) {
-            set_chart_image(ui, idx, img);
+        let chart = &charts[idx];
+
+        if self.mode == RenderMode::WgpuTransform {
+            let transform = self.transform_gpu.borrow();
+            let g = transform.as_ref().expect("transform GPU initialized with device");
+            let mut slots = self.chart_transform_gpu.borrow_mut();
+            let rebind = slots[idx].as_ref().map_or(true, |s| s.size() != (chart.w.max(8), chart.h.max(8)));
+            g.render(&mut slots[idx], chart);
+            if rebind {
+                set_chart_image(ui, idx, slots[idx].as_ref().expect("transform chart slot").img.clone());
+            }
+            return;
+        }
+
+        // Phase 2: Extract geometry primitives (CPU cost, but decoupled)
+        let prims = crate::geom::emit_primitives(chart);
+
+        // Phase 2: Render primitives as GPU triangle mesh
+        let mut slots = self.chart_gpu.borrow_mut();
+        let rebind = slots[idx].as_ref().map_or(true, |s| (s.w, s.h) != (chart.w.max(8), chart.h.max(8)));
+        g.render_from_primitives(&mut slots[idx], &prims, chart.w, chart.h);
+        if rebind {
+            set_chart_image(ui, idx, slots[idx].as_ref().expect("chart GPU slot").img.clone());
         }
     }
 
@@ -140,8 +190,7 @@ impl App {
         let Some(ui) = self.ui.upgrade() else { return };
         let charts = self.charts.borrow();
         match self.mode {
-            #[cfg(not(target_family = "wasm"))]
-            RenderMode::Wgpu => {
+            RenderMode::Wgpu | RenderMode::WgpuTransform => {
                 drop(charts);
                 for i in 0..8 {
                     self.render_chart_gpu(&ui, i);
@@ -267,12 +316,33 @@ pub fn run() {
 
     let mode = render_mode();
     // wgpu chart mode requires Slint's wgpu 30 renderer (femtovg-on-wgpu).
-    #[cfg(not(target_family = "wasm"))]
-    if mode == RenderMode::Wgpu {
+    if mode.uses_wgpu() {
+        let settings = slint::wgpu_30::WGPUSettings::default();
+        #[cfg(target_family = "wasm")]
+        let settings = {
+            let mut settings = settings;
+            let query = web_sys::window().expect("browser window").location().search().expect("URL query");
+            let params = web_sys::UrlSearchParams::new_with_str(&query).expect("valid URL query");
+            settings.backends = match params.get("gpu").as_deref() {
+                None | Some("auto") => settings.backends,
+                Some("webgpu") => slint::wgpu_30::wgpu::Backends::BROWSER_WEBGPU,
+                Some("webgl") => slint::wgpu_30::wgpu::Backends::GL,
+                Some(other) => panic!("unsupported GPU backend: {other}"),
+            };
+            settings
+        };
         slint::BackendSelector::new()
-            .require_wgpu_30(slint::wgpu_30::WGPUConfiguration::default())
+            .require_wgpu_30(slint::wgpu_30::WGPUConfiguration::Automatic(settings))
             .select()
             .expect("wgpu 30 renderer required");
+    }
+    #[cfg(target_family = "wasm")]
+    if !mode.uses_wgpu() {
+        slint::BackendSelector::new()
+            .backend_name("winit".into())
+            .renderer_name("femtovg".into())
+            .select()
+            .expect("the web CPU baseline requires Slint's WebGL FemtoVG renderer");
     }
 
     let t_app = now_ms();
@@ -301,10 +371,11 @@ pub fn run() {
         bench: RefCell::new(None),
         frame_cache: RefCell::new((0..8).map(|_| None).collect()),
         mode,
-        #[cfg(not(target_family = "wasm"))]
         gpu: RefCell::new(None),
-        #[cfg(not(target_family = "wasm"))]
         chart_gpu: RefCell::new((0..8).map(|_| None).collect()),
+        transform_gpu: RefCell::new(None),
+        chart_transform_gpu: RefCell::new((0..8).map(|_| None).collect()),
+        updates_started: Cell::new(false),
     });
 
     {
@@ -345,6 +416,7 @@ pub fn run() {
             app.pan_x.set(x);
             app.charts.borrow_mut()[idx as usize].pan_px(dx);
             app.render_chart(idx as usize);
+            app.request_redraw();
         });
     }
     {
@@ -361,24 +433,46 @@ pub fn run() {
             let sf = app.ui.upgrade().map(|u| u.window().scale_factor()).unwrap_or(1.0);
             app.charts.borrow_mut()[idx as usize].zoom_at(x as f64 * sf as f64, dy as f64);
             app.render_chart(idx as usize);
+            app.request_redraw();
         });
     }
 
     let is_bench = bench_flag();
+    let rate = stream_rate().unwrap_or(if is_bench { 2000.0 } else { 1000.0 });
 
-    if is_bench || mode == RenderMode::Wgpu {
+    if is_bench || mode.uses_wgpu() {
         // Frame-latency sampling + wgpu device/queue capture.
         let app2 = app.clone();
-        let _ = ui.window().set_rendering_notifier(move |state, api| {
-            #[cfg(not(target_family = "wasm"))]
-            {
+        ui.window().set_rendering_notifier(move |state, api| {
+            if app2.mode.uses_wgpu() {
                 if let slint::RenderingState::RenderingSetup = state {
                     if let slint::GraphicsAPI::WGPU30 { device, queue, .. } = api {
                         if app2.gpu.borrow().is_none() {
+                            if app2.mode == RenderMode::WgpuTransform {
+                                *app2.transform_gpu.borrow_mut() = Some(
+                                    crate::gpu_transform::Gpu::new(device.clone(), queue.clone())
+                                );
+                            }
                             *app2.gpu.borrow_mut() =
                                 Some(crate::gpu::Gpu::new(device.clone(), queue.clone()));
+                            let weak = Rc::downgrade(&app2);
+                            Timer::single_shot(Duration::ZERO, move || {
+                                if let Some(app) = weak.upgrade() {
+                                    start_updates(&app, t_app, is_bench, rate);
+                                    app.render_all();
+                                    app.request_redraw();
+                                }
+                            });
                         }
+                    } else {
+                        panic!("wgpu chart renderer requires Slint's WGPU30 graphics API");
                     }
+                }
+                if let slint::RenderingState::RenderingTeardown = state {
+                    app2.chart_gpu.borrow_mut().iter_mut().for_each(|slot| *slot = None);
+                    app2.chart_transform_gpu.borrow_mut().iter_mut().for_each(|slot| *slot = None);
+                    app2.gpu.borrow_mut().take();
+                    app2.transform_gpu.borrow_mut().take();
                 }
             }
             if let slint::RenderingState::AfterRendering = state {
@@ -386,13 +480,20 @@ pub fn run() {
                     b.on_frame();
                 }
             }
-        });
+        }).expect("rendering notifier is required for GPU rendering and benchmarks");
     }
 
-    // Streaming replay: after the 4000-bar preload, stream the remaining
-    // 19,400 bars/chart at `rate` bars/sec in ~50 ms batches.
-    // Bench default rate = 2000 bars/s (documented); interactive default 1000.
-    let rate = stream_rate().unwrap_or(if is_bench { 2000.0 } else { 1000.0 });
+    if !mode.uses_wgpu() {
+        start_updates(&app, t_app, is_bench, rate);
+    }
+
+    ui.run().expect("Slint event loop failed");
+}
+
+fn start_updates(app: &Rc<App>, t_app: f64, is_bench: bool, rate: f64) {
+    if app.updates_started.replace(true) {
+        return;
+    }
     let done_cb: Rc<dyn Fn(Rc<App>)> = if is_bench {
         let app2 = app.clone();
         bench::start(app2, t_app, rate);
@@ -414,6 +515,19 @@ pub fn run() {
         })
     };
     app.start_stream(rate, done_cb);
+}
 
-    let _ = ui.run();
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn web_render_mode_is_explicit() {
+        assert!(parse_render_mode(None) == Some(RenderMode::Pixels));
+        assert!(parse_render_mode(Some("pixels")) == Some(RenderMode::Pixels));
+        assert!(parse_render_mode(Some("paths")) == Some(RenderMode::Paths));
+        assert!(parse_render_mode(Some("wgpu")) == Some(RenderMode::Wgpu));
+        assert!(parse_render_mode(Some("wgpu-transform")) == Some(RenderMode::WgpuTransform));
+        assert!(parse_render_mode(Some("webgpu")).is_none());
+    }
 }

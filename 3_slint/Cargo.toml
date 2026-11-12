@@ -5,6 +5,9 @@ edition = "2021"
 build = "build.rs"
 publish = false
 
+[patch.crates-io]
+i-slint-backend-winit = { path = "vendor/i-slint-backend-winit" }
+
 [lib]
 name = "slint_testbed"
 path = "src/lib.rs"
@@ -33,7 +36,10 @@ serde_json = "1"
 slint-build = "=1.18.1"
 
 [features]
-default = ["slint/default"]
+default = ["slint/default", "render-cpu"]
+render-cpu = []      # CPU SharedPixelBuffer (baseline, default)
+render-gpu = []      # GPU mesh rendering via wgpu (native only)
+render-both = []     # Hybrid: GPU plot + Slint UI via texture import
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 wasm-bindgen = "0.2"
@@ -42,8 +48,9 @@ js-sys = "0.3"
 web-sys = { version = "0.3", features = [
     "console", "Window", "Location", "Performance", "Document",
     "HtmlAnchorElement", "HtmlElement", "Blob", "BlobPropertyBag", "Url", "Request",
-    "RequestInit", "RequestMode", "Response", "Headers",
+    "RequestInit", "RequestMode", "Response", "Headers", "UrlSearchParams",
 ] }
+slint = { version = "=1.18.1", features = ["unstable-wgpu-30", "renderer-femtovg-wgpu"] }
 getrandom = { version = "0.2", features = ["js"] }   # rand 0.8 on wasm32-unknown-unknown
 console_error_panic_hook = "0.1"
 

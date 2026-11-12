@@ -15,7 +15,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use serde_json::json;
-use slint::{Timer, TimerMode};
+use slint::{ComponentHandle, Timer, TimerMode};
 
 use crate::app::App;
 use crate::chart::compute_all_ta;
@@ -46,7 +46,7 @@ impl FrameStat {
     }
 
     fn as_json(&self, fps: f64) -> serde_json::Value {
-        json!({ "avg_ms": self.avg_ms, "p95_ms": self.p95_ms, "p99_ms": self.p99_ms, "fps": fps })
+        json!({ "samples": self.n, "avg_ms": self.avg_ms, "p95_ms": self.p95_ms, "p99_ms": self.p99_ms, "fps": fps })
     }
 }
 
@@ -353,6 +353,12 @@ fn finish(app: Rc<App>, bench: Rc<Bench>) {
     let result = json!({
         "config": "slint",
         "target": if cfg!(target_family = "wasm") { "web" } else { "desktop" },
+        "chart_renderer": app.render_mode_name(),
+        "wgpu_backend": app.gpu_backend_name(),
+        "wgpu_adapter": app.gpu_adapter_name(),
+        "slint_backend_requested": std::env::var("SLINT_BACKEND").ok(),
+        "scale_factor": app.ui.upgrade().map(|ui| ui.window().scale_factor()),
+        "chart_physical_sizes": app.charts.borrow().iter().map(|c| [c.w, c.h]).collect::<Vec<_>>(),
         "timestamp": iso_now(),
         "environment": env_info(),
         "charts": datagen::NUM_CHARTS,
@@ -392,15 +398,16 @@ fn finish(app: Rc<App>, bench: Rc<Bench>) {
             "frame = UI action -> rendered frame latency; fps = rendered frames/s during the phase. \
              Data generation excluded. Streaming replay: {} bars preload + {rate:.0} bars/s in 50ms \
              batches through the incremental indicator path. EMA/SMA via pure-Rust `ta` crate \
-             (TA-Lib-compatible SMA seed); VWAP+volume profile via shared/indicators. Charts \
-             software-rendered in Rust into SharedPixelBuffer.",
+             (TA-Lib-compatible SMA seed); VWAP+volume profile via shared/indicators. \
+             Chart renderer: {}. AfterRendering is not a GPU completion or presentation fence.",
             datagen::INITIAL_BARS,
+            app.render_mode_name(),
             rate = bench.stream_rate
         ),
     });
 
     let text = serde_json::to_string_pretty(&result).unwrap_or_default();
-    emit_json(&text);
+    emit_json(&text, app.render_mode_name(), app.gpu_backend_name().as_deref());
 
     // Native: exit after the run so scripted benches don't hang.
     // wasm: keep the UI alive so results stay visible.

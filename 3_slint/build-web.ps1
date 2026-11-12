@@ -4,6 +4,7 @@ Set-Location $PSScriptRoot
 
 wasm-pack build --release --target web --out-dir pkg `
     --no-default-features --features slint/backend-winit,slint/renderer-femtovg
+if ($LASTEXITCODE -ne 0) { throw "wasm-pack build failed with exit code $LASTEXITCODE" }
 
 $wasm = (Get-Item pkg/slint_testbed_bg.wasm).Length
 $js = (Get-Item pkg/slint_testbed.js).Length
